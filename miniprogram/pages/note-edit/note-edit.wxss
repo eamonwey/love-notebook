@@ -1,0 +1,25 @@
+.type-row {
+  margin-bottom: 8rpx;
+}
+
+.type-chip {
+  padding: 14rpx 30rpx;
+  border-radius: 32rpx;
+  background: #f5f1ef;
+  color: #7c7570;
+  font-size: 28rpx;
+  margin-right: 20rpx;
+}
+
+.type-on {
+  background: linear-gradient(135deg, #ff8a9e, #ff6b81);
+  color: #ffffff;
+}
+
+.type-on-sad {
+  background: linear-gradient(135deg, #7ba6f0, #5b8def);
+}
+
+.edit-input {
+  min-height: 240rpx;
+}

@@ -1,0 +1,22 @@
+<view class="page">
+  <view class="card">
+    <view class="type-row row">
+      <view class="type-chip {{type === 'happy' ? 'type-on' : ''}}" bindtap="setType" data-type="happy">
+        😊 开心的事
+      </view>
+      <view class="type-chip {{type === 'unhappy' ? 'type-on type-on-sad' : ''}}" bindtap="setType" data-type="unhappy">
+        😞 不满的事
+      </view>
+    </view>
+
+    <textarea class="content-input edit-input" placeholder="具体说说发生了什么…（交换后TA才能看到）"
+      value="{{content}}" bindinput="onInput" maxlength="500" />
+
+    <view class="row-between">
+      <text></text>
+      <text class="muted">{{content.length}}/500</text>
+    </view>
+  </view>
+
+  <button class="btn-primary" bindtap="onSave">保存记录</button>
+</view>

@@ -1,0 +1,75 @@
+.identity-row {
+  margin-top: 24rpx;
+}
+
+.identity {
+  flex: 1;
+  text-align: center;
+  background: #f5f1ef;
+  border-radius: 32rpx;
+  padding: 18rpx 0;
+  margin-right: 20rpx;
+  color: #7c7570;
+  font-size: 30rpx;
+}
+
+.identity:last-child {
+  margin-right: 0;
+}
+
+.identity-on {
+  background: linear-gradient(135deg, #ff8a9e, #ff6b81);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.days-row {
+  margin-top: 24rpx;
+  flex-wrap: wrap;
+}
+
+.day-chip {
+  background: #f5f1ef;
+  border-radius: 30rpx;
+  padding: 12rpx 34rpx;
+  margin-right: 20rpx;
+  margin-bottom: 12rpx;
+  color: #7c7570;
+  font-size: 28rpx;
+}
+
+.day-on {
+  background: linear-gradient(135deg, #ff8a9e, #ff6b81);
+  color: #ffffff;
+}
+
+.days-custom {
+  margin-top: 10rpx;
+}
+
+.days-input {
+  flex: 1;
+  background: #fff8f6;
+  border-radius: 16rpx;
+  padding: 14rpx 24rpx;
+  font-size: 26rpx;
+}
+
+.form-row {
+  margin-top: 20rpx;
+}
+
+.form-label {
+  font-size: 26rpx;
+  color: #9a938f;
+  width: 150rpx;
+}
+
+.btn-danger {
+  background: #fff0f0;
+  color: #d9534f;
+  border-radius: 44rpx;
+  font-size: 28rpx;
+  padding: 4rpx 0;
+  margin-top: 16rpx;
+}

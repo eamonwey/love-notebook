@@ -1,0 +1,9 @@
+{
+  "name": "love-notebook",
+  "version": "1.0.0",
+  "private": true,
+  "description": "恋恋温度计：情侣周期打分与感受交换小程序",
+  "scripts": {
+    "test": "node test/validate-json.js && node test/syntax-check.js && node test/flow.test.js"
+  }
+}

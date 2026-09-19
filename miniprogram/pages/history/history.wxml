@@ -1,0 +1,83 @@
+<view class="page">
+  <view class="card">
+    <view class="row-between">
+      <view class="title">分数追踪</view>
+      <view class="link" bindtap="toggleAddEvent">{{showAddEvent ? '收起' : '＋ 记录事件'}}</view>
+    </view>
+
+    <block wx:if="{{hasData}}">
+      <canvas type="2d" id="chart" class="chart" bindtouchend="onChartTap"></canvas>
+      <view class="row legend">
+        <view class="legend-item"><view class="dot dot-me"></view>我</view>
+        <view class="legend-item"><view class="dot dot-ta"></view>TA</view>
+        <view class="legend-item"><view class="dot dot-ev"></view>事件</view>
+      </view>
+      <view class="muted" wx:if="{{cyclesTruncated}}">期数较多，仅显示最近 100 期</view>
+      <view class="muted">点击图上的点，可以查看该期的分数与事件。</view>
+    </block>
+    <view class="empty" wx:else>
+      <view class="empty-emoji">📈</view>
+      <view class="muted">完成第一次交换后，这里会出现分数曲线</view>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{selected}}">
+    <view class="row-between">
+      <view class="title">第 {{selected.index}} 期</view>
+      <view class="link" bindtap="goDetail" data-id="{{selected.cycleId}}">查看交换详情 ›</view>
+    </view>
+    <view class="muted">
+      我 {{selected.myScore == null ? '—' : selected.myScore}} 分 · TA {{selected.partnerScore == null ? '—' : selected.partnerScore}} 分
+    </view>
+    <view class="ev-item" wx:for="{{selectedEvents}}" wx:key="id" bindlongpress="onDeleteEvent"
+      data-id="{{item.id}}">
+      <view class="row-between">
+        <text class="ev-title">{{item.authorName}}：{{item.prevScore == null ? '—' : item.prevScore}} → {{item.newScore == null ? '—' : item.newScore}}</text>
+        <text class="muted">{{item.dateText}}</text>
+      </view>
+      <view class="ev-reason">{{item.reason}}</view>
+    </view>
+    <view class="muted" wx:if="{{!selectedEvents.length}}">这一期没有记录事件</view>
+  </view>
+
+  <view class="card" wx:if="{{showAddEvent}}">
+    <view class="title">记录一个事件</view>
+    <view class="form-row row">
+      <text class="form-label">属于</text>
+      <picker range="{{cycleOptions}}" value="{{cycleIdx}}" bindchange="onCyclePick">
+        <view class="picker-value">{{cycleOptions[cycleIdx] || '选择周期'}}</view>
+      </picker>
+    </view>
+    <view class="form-row row">
+      <text class="form-label">分数变化</text>
+      <picker range="{{scoreOptions}}" value="{{prevIdx}}" bindchange="onPrevPick">
+        <view class="picker-value">{{scoreOptions[prevIdx]}}</view>
+      </picker>
+      <text class="muted"> → </text>
+      <picker range="{{scoreOptions}}" value="{{newIdx}}" bindchange="onNewPick">
+        <view class="picker-value">{{scoreOptions[newIdx]}}</view>
+      </picker>
+    </view>
+    <textarea class="content-input" placeholder="发生了什么？为什么会变化？"
+      value="{{reason}}" bindinput="onReason" maxlength="200" />
+    <button class="btn-primary" bindtap="saveEvent">保存事件</button>
+  </view>
+
+  <view class="card">
+    <view class="row-between">
+      <view class="title">事件时间线</view>
+      <view class="muted">长按自己的事件可删除</view>
+    </view>
+    <view class="empty-mini" wx:if="{{!events.length}}">
+      <text class="muted">还没有事件记录。打分时分数变化会提示记录，也可以手动添加。</text>
+    </view>
+    <view class="muted" wx:if="{{eventsTruncated}}">事件较多，仅显示最近 200 条</view>
+    <view class="ev-item" wx:for="{{events}}" wx:key="id" bindlongpress="onDeleteEvent" data-id="{{item.id}}">
+      <view class="row-between">
+        <text class="ev-title">第{{item.cycleIndex}}期 · {{item.authorName}} · {{item.prevScore == null ? '—' : item.prevScore}} → {{item.newScore == null ? '—' : item.newScore}}</text>
+        <text class="muted">{{item.dateText}}</text>
+      </view>
+      <view class="ev-reason">{{item.reason}}</view>
+    </view>
+  </view>
+</view>

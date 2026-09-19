@@ -1,0 +1,101 @@
+<view class="page">
+  <!-- 当前周期交换区 -->
+  <view class="card" wx:if="{{status}}">
+    <view class="title">第 {{status.cycle.index}} 期交换</view>
+    <view class="check-item" wx:if="{{status.myScore}}">✅ 我的打分已完成（{{status.myScore.score}} 分，对方暂时看不到）</view>
+    <view class="check-item" wx:else>⬜ 我的打分未完成 <text class="link" bindtap="goScore">去打分</text></view>
+    <view class="check-item" wx:if="{{status.partnerDone}}">✅ TA的打分已完成（分数交换后揭晓）</view>
+    <view class="check-item" wx:else>⬜ TA的打分未完成，等待中…</view>
+
+    <!-- 交换请求进行中 -->
+    <block wx:if="{{status.exchangeRequest}}">
+      <view class="req-banner" wx:if="{{status.exchangeRequest.from === status.me}}">
+        <view class="req-text">💌 你已发起交换请求，等待TA同意</view>
+        <button class="btn-plain mini" bindtap="onCancelRequest">撤回请求</button>
+      </view>
+      <view class="req-banner" wx:else>
+        <view class="req-text">💌 {{status.users[status.exchangeRequest.from].name || 'TA'}} 想和你交换啦！</view>
+        <view class="row">
+          <button class="btn-primary mini {{status.bothScored ? '' : 'btn-disabled'}}" bindtap="onAgreeExchange">同意并交换</button>
+          <button class="btn-plain mini" bindtap="onDeclineRequest">暂不</button>
+        </view>
+        <view class="muted" wx:if="{{!status.bothScored}}">同意前双方都需要完成打分。</view>
+      </view>
+    </block>
+
+    <!-- 无请求时：统一走发起请求 -->
+    <block wx:else>
+      <view class="muted" wx:if="{{status.bothScored}}">双方都完成了打分。发起请求，TA同意后即可交换。</view>
+      <view class="muted" wx:else>发起交换请求，TA会收到微信提醒；TA打完分并同意后即可交换。</view>
+      <button class="btn-primary" bindtap="onRequestExchange">💌 发起交换请求</button>
+    </block>
+
+    <!-- 约定交换时间 -->
+    <view class="plan-section">
+      <view class="plan-title">约定交换时间（可选）</view>
+      <block wx:if="{{status.exchangePlan}}">
+        <view class="plan-value">📅 {{planText}} <text class="muted">{{planRemain}}</text></view>
+        <view class="row">
+          <button class="btn-plain mini" bindtap="onCancelPlan">取消约定</button>
+        </view>
+      </block>
+      <block wx:else>
+        <picker mode="multiSelector" range="{{planCols}}" value="{{planIdx}}" bindchange="onPlanChange">
+          <button class="btn-plain">📅 约定一个交换时间</button>
+        </picker>
+        <view class="muted">滚筒选「第几天 + 几点」，时间一到双方都会收到微信提醒，不怕忘记打分交换。</view>
+      </block>
+    </view>
+  </view>
+
+  <!-- 已交换周期详情 -->
+  <block wx:if="{{detail && detail.status === 'exchanged'}}">
+    <view class="card">
+      <view class="title">第 {{detail.index}} 期的交换结果</view>
+      <view class="row score-compare">
+        <view class="score-col">
+          <view class="muted">{{myName}}</view>
+          <view class="score-big">{{detail.my ? detail.my.score : '—'}}</view>
+          <view class="comment-bubble" wx:if="{{detail.my && detail.my.comment}}">{{detail.my.comment}}</view>
+        </view>
+        <view class="vs">VS</view>
+        <view class="score-col">
+          <view class="muted">{{detail.partner.name}}</view>
+          <view class="score-big partner">{{detail.partner.score == null ? '—' : detail.partner.score}}</view>
+          <view class="comment-bubble" wx:if="{{detail.partner.comment}}">{{detail.partner.comment}}</view>
+        </view>
+      </view>
+      <view class="muted" wx:if="{{detail.exchangedText}}">交换时间：{{detail.exchangedText}}</view>
+    </view>
+
+    <view class="card">
+      <view class="title">本期的笔记与批注</view>
+      <view class="empty-mini" wx:if="{{!detail.notes.length}}">
+        <text class="muted">本期双方都没有留下笔记</text>
+      </view>
+      <view class="note-block" wx:for="{{detail.notes}}" wx:key="id">
+        <view class="row-between note-head" bindtap="toggleNote" data-id="{{item.id}}">
+          <view class="tag {{item.type === 'happy' ? 'tag-happy' : 'tag-unhappy'}}">
+            {{item.type === 'happy' ? '😊' : '😞'}} {{item.authorName}}{{item.mine ? '（我）' : ''}}
+          </view>
+          <view class="muted">
+            {{expanded[item.id] ? '收起 ▾' : '展开 ▸'}}
+            <text wx:if="{{item.annotations.length}}"> 💬{{item.annotations.length}}</text>
+          </view>
+        </view>
+        <view class="note-body" wx:if="{{expanded[item.id]}}">
+          <view class="note-content">{{item.content}}</view>
+          <view class="ann-item" wx:for="{{item.annotations}}" wx:for-item="ann" wx:key="id">
+            <text class="ann-author">{{ann.authorName}}：</text>
+            <text>{{ann.content}}</text>
+          </view>
+          <view class="row ann-input-row">
+            <input class="ann-input" placeholder="写点批注…" value="{{annDraft[item.id]}}"
+              bindinput="onAnnInput" data-id="{{item.id}}" />
+            <button class="btn-primary mini" bindtap="submitAnn" data-id="{{item.id}}">批注</button>
+          </view>
+        </view>
+      </view>
+    </view>
+  </block>
+</view>

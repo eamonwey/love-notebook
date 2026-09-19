@@ -1,0 +1,79 @@
+<view class="page">
+  <view class="loading" wx:if="{{mode === 'loading'}}">
+    <text class="muted">加载中…</text>
+  </view>
+
+  <!-- 云环境未配置 -->
+  <view class="card" wx:if="{{error === 'CLOUD_ENV_NOT_SET'}}">
+    <view class="title">先完成云开发配置</view>
+    <view class="muted">还没有配置云开发环境，绑定功能需要云端支持。</view>
+    <button class="btn-primary" bindtap="goSetup">查看配置引导</button>
+  </view>
+
+  <!-- 通过微信卡片接受邀请 -->
+  <block wx:if="{{mode === 'confirm'}}">
+    <view class="card">
+      <view class="title">💌 伴侣邀请</view>
+      <block wx:if="{{!joinError}}">
+        <view class="muted">「{{ownerName}}」邀请你绑定，一起记录这段感情。接受后你们将共享周期、互相打分交换。</view>
+        <button class="btn-primary" bindtap="acceptInvite">接受邀请</button>
+      </block>
+      <block wx:else>
+        <view class="muted">{{joinError}}</view>
+        <button class="btn-plain" bindtap="goHome">先去逛逛</button>
+      </block>
+    </view>
+  </block>
+
+  <!-- 配对视图：昵称 / 邀请 / 输码 三步独立 -->
+  <block wx:if="{{mode === 'pair' && error !== 'CLOUD_ENV_NOT_SET'}}">
+    <view class="card" wx:if="{{error}}">
+      <view class="muted">{{error}}</view>
+      <button class="btn-plain" bindtap="refresh">重试</button>
+    </view>
+
+    <view class="card">
+      <view class="title">① 我的昵称</view>
+      <view class="muted">只保存昵称，不会触发任何绑定。</view>
+      <view class="form-row row">
+        <input class="ann-input" placeholder="TA看到的称呼" value="{{nickname}}" bindinput="onNickname" />
+        <button class="btn-primary mini" bindtap="saveNickname">保存</button>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="title">② 邀请TA</view>
+      <block wx:if="{{code}}">
+        <view class="code-line">我的邀请码：<text class="code">{{code}}</text></view>
+        <button class="btn-plain mini" bindtap="copyCode">复制邀请码</button>
+        <button class="btn-primary share-btn" open-type="share">💌 通过微信邀请TA</button>
+      </block>
+      <block wx:else>
+        <button class="btn-primary" bindtap="createInvite">生成我的邀请码</button>
+        <view class="muted">生成后通过微信发给对方，对方点开卡片即可绑定。</view>
+      </block>
+    </view>
+
+    <view class="card">
+      <view class="title">③ 输入对方的邀请码</view>
+      <view class="form-row row">
+        <input class="ann-input" placeholder="对方生成的邀请码" value="{{joinInput}}" bindinput="onJoinInput" />
+        <button class="btn-primary mini" bindtap="joinManual">绑定</button>
+      </view>
+      <view class="muted">绑定成功后你们就共用同一本笔记本啦。</view>
+    </view>
+  </block>
+
+  <!-- 已绑定 -->
+  <block wx:if="{{mode === 'bound'}}">
+    <view class="card">
+      <view class="title">已绑定 ✓</view>
+      <view class="muted">{{pairNames}}</view>
+      <view class="form-row row">
+        <input class="ann-input" placeholder="修改我的昵称" value="{{nickname}}" bindinput="onNickname" />
+        <button class="btn-plain mini" bindtap="saveNickname">保存</button>
+      </view>
+      <button class="btn-primary" bindtap="goHome">开始本期的记录</button>
+    </view>
+  </block>
+</view>

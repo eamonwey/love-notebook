@@ -1,0 +1,24 @@
+.form-row {
+  margin-top: 20rpx;
+}
+
+.code-line {
+  margin-top: 24rpx;
+  font-size: 28rpx;
+}
+
+.code {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #ff6b81;
+  letter-spacing: 6rpx;
+}
+
+.share-btn {
+  margin-top: 24rpx;
+}
+
+.loading {
+  text-align: center;
+  padding: 120rpx 0;
+}

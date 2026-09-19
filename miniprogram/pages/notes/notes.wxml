@@ -1,0 +1,32 @@
+<view class="page">
+  <view class="card head-card" wx:if="{{cycle}}">
+    <view class="row-between">
+      <view class="title">第 {{cycle.index}} 期 · 我的记录</view>
+      <view class="link" bindtap="goAdd">＋ 添加</view>
+    </view>
+    <view class="muted">随时记下开心与不满。交换之后TA才能看到这些笔记，并且可以写下批注。</view>
+  </view>
+
+  <view class="empty" wx:if="{{cycle && notes.length === 0}}">
+    <view class="empty-emoji">📒</view>
+    <view class="muted">本期还没有记录，随手记一笔吧</view>
+  </view>
+
+  <view class="card note-item" wx:for="{{notes}}" wx:key="id">
+    <view class="row-between">
+      <view class="tag {{item.type === 'happy' ? 'tag-happy' : 'tag-unhappy'}}">
+        {{item.type === 'happy' ? '😊 开心' : '😞 不满'}}
+      </view>
+      <view class="muted">{{item.timeText}}</view>
+    </view>
+    <view class="note-content">{{item.content}}</view>
+    <view class="row-between note-foot">
+      <view class="muted" wx:if="{{item.annCount > 0}}">💬 {{item.annCount}} 条批注</view>
+      <view wx:else></view>
+      <view class="del" bindtap="onDelete" data-id="{{item.id}}">删除</view>
+    </view>
+  </view>
+
+  <view class="fab-space"></view>
+  <button class="btn-primary fab" bindtap="goAdd">＋ 记一笔</button>
+</view>

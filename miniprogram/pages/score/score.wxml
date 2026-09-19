@@ -1,0 +1,31 @@
+<view class="page">
+  <view class="card">
+    <view class="title">第 {{cycleIndex}} 期感受打分</view>
+    <view class="muted">0 分很糟糕，10 分非常幸福。打分仅针对当前周期，交换后对方才能看到。</view>
+
+    <view class="big-score">{{score}}<text class="big-emoji">{{emoji}}</text></view>
+    <slider min="0" max="10" step="1" value="{{score}}" activeColor="#FF6B81" backgroundColor="#FFE4E4"
+      block-size="24" bindchanging="onSlidingPreview" bindchange="onSlideCommit" />
+    <view class="row-between scale-hints">
+      <text class="muted">0</text>
+      <text class="muted">5</text>
+      <text class="muted">10</text>
+    </view>
+
+    <textarea class="content-input" placeholder="这一周期里想对TA说的话（交换后可见，选填）"
+      value="{{comment}}" bindinput="onComment" maxlength="200" />
+  </view>
+
+  <button class="btn-primary" bindtap="onSave">保存打分</button>
+
+  <view class="card" wx:if="{{showEvent}}">
+    <view class="title">分数变化了：{{prevScore}} → {{score}}</view>
+    <view class="muted">记录下发生了什么，以后就能回看为什么变化（可选）</view>
+    <textarea class="content-input" placeholder="比如：这周为旅行计划吵了一架，后来和好了"
+      value="{{eventReason}}" bindinput="onEventReason" maxlength="200" />
+    <view class="row">
+      <button class="btn-primary mini" bindtap="onSaveEvent">记录原因</button>
+      <button class="btn-plain mini" bindtap="onSkipEvent">跳过</button>
+    </view>
+  </view>
+</view>

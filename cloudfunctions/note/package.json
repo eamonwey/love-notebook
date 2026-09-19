@@ -1,0 +1,9 @@
+{
+  "name": "cloudfunc-note",
+  "version": "1.0.0",
+  "description": "感受记录与批注",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

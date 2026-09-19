@@ -1,0 +1,49 @@
+<view class="page">
+  <view class="card" wx:if="{{isMock}}">
+    <view class="title">演示身份（仅本地调试）</view>
+    <view class="muted">当前处于本地演示模式，以「{{myName}}」操作。真实使用请接入云开发，用微信邀请绑定另一半，在两台手机上各自操作。</view>
+    <view class="identity-row row">
+      <view class="identity {{me === 'userA' ? 'identity-on' : ''}}" bindtap="setMe" data-id="userA">小A</view>
+      <view class="identity {{me === 'userB' ? 'identity-on' : ''}}" bindtap="setMe" data-id="userB">小B</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="title">伴侣绑定</view>
+    <block wx:if="{{isMock}}">
+      <view class="muted">演示模式：已自动将 小A 与 小B 配成一对。云开发模式下，这里可以发起微信邀请、一键绑定。</view>
+    </block>
+    <block wx:else>
+      <view class="muted" wx:if="{{pairedNames}}">已绑定：{{pairedNames}}</view>
+      <view class="muted" wx:else>还没有绑定。生成邀请码，通过微信发给TA即可绑定。</view>
+      <button class="btn-primary" bindtap="goPair">伴侣邀请 / 绑定</button>
+      <button class="btn-danger" wx:if="{{pairedNames}}" bindtap="onUnbind">与TA解绑</button>
+    </block>
+  </view>
+
+  <view class="card">
+    <view class="title">交换周期</view>
+    <view class="muted">当前每 {{cycleDays}} 天一期，修改后下一期生效。</view>
+    <view class="days-row row">
+      <view class="day-chip {{cycleDays === item ? 'day-on' : ''}}" wx:for="{{[3, 7, 14, 30]}}" wx:key="*this"
+        bindtap="pickDays" data-days="{{item}}">{{item}}天</view>
+    </view>
+    <view class="row days-custom">
+      <input class="days-input" type="number" placeholder="自定义天数" value="{{customDays}}" bindinput="onCustomDays" />
+      <button class="btn-primary mini" bindtap="saveCustomDays">确定</button>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{isMock}}">
+    <view class="title">演示数据</view>
+    <view class="muted">想从头体验一遍完整流程？重置后所有本地数据清空。</view>
+    <button class="btn-plain" bindtap="resetData">重置演示数据</button>
+  </view>
+
+  <view class="card">
+    <view class="title">关于</view>
+    <view class="muted">恋恋温度计 v0.2.0</view>
+    <view class="muted">周期打分（0-10）· 感受笔记与批注 · 定期交换 · 分数追踪</view>
+    <view class="muted">当前模式：{{isMock ? '本地演示' : '微信云开发'}}</view>
+  </view>
+</view>

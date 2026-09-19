@@ -1,0 +1,16 @@
+.cycle-item {
+  margin-top: 20rpx;
+}
+
+.cycle-title {
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.score-pill {
+  font-size: 26rpx;
+  color: #ff6b81;
+  background: #ffedef;
+  border-radius: 24rpx;
+  padding: 8rpx 20rpx;
+}

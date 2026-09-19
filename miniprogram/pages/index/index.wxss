@@ -1,0 +1,112 @@
+.head {
+  margin: 30rpx 32rpx 6rpx;
+}
+
+.app-title {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #ff6b81;
+}
+
+.identity-pill {
+  background: #ffedef;
+  color: #ff6b81;
+  font-size: 24rpx;
+  border-radius: 30rpx;
+  padding: 8rpx 22rpx;
+}
+
+.loading {
+  text-align: center;
+  padding: 120rpx 0;
+}
+
+.hero {
+  background: linear-gradient(135deg, #ff8a9e, #ff6b81);
+  color: #ffffff;
+}
+
+.hero .muted {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.cycle-index {
+  font-size: 44rpx;
+  font-weight: 700;
+}
+
+.remain-chip {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 26rpx;
+  padding: 6rpx 20rpx;
+  font-size: 24rpx;
+}
+
+.progress {
+  height: 14rpx;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 10rpx;
+  margin-top: 24rpx;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: #ffffff;
+  border-radius: 10rpx;
+}
+
+.score-line {
+  font-size: 52rpx;
+  font-weight: 700;
+  color: #ff6b81;
+}
+
+.score-none {
+  color: #d8d2cf;
+  font-size: 40rpx;
+}
+
+.emoji {
+  font-size: 44rpx;
+}
+
+.score-arrow {
+  color: #ff6b81;
+  font-size: 28rpx;
+}
+
+.exchange-line {
+  font-size: 28rpx;
+  margin-bottom: 4rpx;
+}
+
+.hist-row {
+  margin-top: 20rpx;
+  padding-top: 20rpx;
+  border-top: 2rpx solid #f6ecea;
+}
+
+.quick {
+  margin: 24rpx;
+  justify-content: space-between;
+}
+
+.quick-item {
+  width: 23%;
+  background: #ffffff;
+  border-radius: 20rpx;
+  padding: 22rpx 0;
+  text-align: center;
+  box-shadow: 0 8rpx 30rpx rgba(255, 107, 129, 0.07);
+}
+
+.quick-emoji {
+  font-size: 44rpx;
+}
+
+.quick-text {
+  font-size: 22rpx;
+  color: #7c7570;
+  margin-top: 6rpx;
+}

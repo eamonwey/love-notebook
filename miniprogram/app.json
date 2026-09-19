@@ -1,0 +1,56 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/score/score",
+    "pages/notes/notes",
+    "pages/note-edit/note-edit",
+    "pages/exchange/exchange",
+    "pages/history/history",
+    "pages/settings/settings",
+    "pages/pair/pair",
+    "pages/setup/setup",
+    "pages/cycle-list/cycle-list"
+  ],
+  "window": {
+    "backgroundColor": "#FFF8F6",
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#FFF8F6",
+    "navigationBarTitleText": "恋恋温度计",
+    "navigationBarTextStyle": "black"
+  },
+  "tabBar": {
+    "color": "#9A938F",
+    "selectedColor": "#FF6B81",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "images/tab-home.png",
+        "selectedIconPath": "images/tab-home-on.png"
+      },
+      {
+        "pagePath": "pages/notes/notes",
+        "text": "记录",
+        "iconPath": "images/tab-note.png",
+        "selectedIconPath": "images/tab-note-on.png"
+      },
+      {
+        "pagePath": "pages/history/history",
+        "text": "追踪",
+        "iconPath": "images/tab-chart.png",
+        "selectedIconPath": "images/tab-chart-on.png"
+      },
+      {
+        "pagePath": "pages/settings/settings",
+        "text": "设置",
+        "iconPath": "images/tab-set.png",
+        "selectedIconPath": "images/tab-set-on.png"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

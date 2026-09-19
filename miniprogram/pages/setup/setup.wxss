@@ -1,0 +1,29 @@
+.step {
+  display: flex;
+  align-items: flex-start;
+  margin-top: 22rpx;
+}
+
+.step-no {
+  flex-shrink: 0;
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  background: #ff6b81;
+  color: #ffffff;
+  font-size: 24rpx;
+  text-align: center;
+  line-height: 40rpx;
+  margin-right: 16rpx;
+}
+
+.step-text {
+  flex: 1;
+  font-size: 26rpx;
+  color: #5f5854;
+}
+
+.err {
+  margin-top: 20rpx;
+  color: #d9534f;
+}

@@ -1,0 +1,87 @@
+<view class="page">
+  <view class="loading" wx:if="{{loading}}">
+    <text class="muted">加载中…</text>
+  </view>
+
+  <view class="card" wx:if="{{needSetup}}">
+    <view class="title">先接入微信云开发</view>
+    <view class="muted">本应用使用云开发实现两台手机的真实双人体验。按引导完成一次性配置即可。</view>
+    <button class="btn-primary" bindtap="goSetup">查看配置引导</button>
+  </view>
+
+  <view class="card" wx:if="{{pairNeeded}}">
+    <view class="title">还没有绑定另一半</view>
+    <view class="muted">{{pairNeededText}}</view>
+    <button class="btn-primary" bindtap="goPair">去邀请TA</button>
+  </view>
+
+  <block wx:if="{{status}}">
+    <view class="head row-between">
+      <view class="app-title">🌡️ 恋恋温度计</view>
+      <view class="identity-pill" wx:if="{{isMock}}" bindtap="onSwitchIdentity">👤 {{users[me].name}} ▾</view>
+    </view>
+
+    <view class="card hero">
+      <view class="row-between">
+        <view>
+          <view class="cycle-index">第 {{status.cycle.index}} 期</view>
+          <view class="muted">{{startText}} — {{endText}}</view>
+        </view>
+        <view class="remain-chip">{{remain}}</view>
+      </view>
+      <view class="progress">
+        <view class="progress-bar" style="width: {{progressPct}}%;"></view>
+      </view>
+    </view>
+
+    <view class="card row-between" bindtap="goScore">
+      <view>
+        <view class="muted">我本期的分数</view>
+        <view class="score-line" wx:if="{{status.myScore}}">
+          {{status.myScore.score}} 分 <text class="emoji">{{emoji}}</text>
+        </view>
+        <view class="score-line score-none" wx:else>还没打分</view>
+        <view class="muted" wx:if="{{status.myScore}}">点击可修改（交换前）</view>
+      </view>
+      <view class="score-arrow">去打分 ›</view>
+    </view>
+
+    <view class="card">
+      <view class="exchange-line" wx:if="{{status.bothScored}}">🎉 双方都完成打分，可以交换了</view>
+      <view class="exchange-line" wx:elif="{{status.myScore}}">⏳ 你已打分，等待TA完成…</view>
+      <view class="exchange-line" wx:else>✍️ 先给本期打个分</view>
+      <button class="btn-primary {{status.bothScored ? '' : 'btn-disabled'}}" bindtap="goExchange">进入交换中心</button>
+      <view class="muted center">交换前双方都不能看到对方的分数和笔记</view>
+    </view>
+
+    <view class="card" wx:if="{{hasLast}}">
+      <view class="row-between">
+        <view>第 {{lastIndex}} 期已交换完毕</view>
+        <view class="link" bindtap="goLastDetail">看看TA的感受 ›</view>
+      </view>
+      <view class="row-between hist-row">
+        <view class="muted">已经交换过 {{exchangedCount}} 期啦</view>
+        <view class="link" bindtap="goCycleList">查看历史交换记录 ›</view>
+      </view>
+    </view>
+
+    <view class="quick row">
+      <view class="quick-item" bindtap="quickAdd" data-type="happy">
+        <view class="quick-emoji">😊</view>
+        <view class="quick-text">记开心事</view>
+      </view>
+      <view class="quick-item" bindtap="quickAdd" data-type="unhappy">
+        <view class="quick-emoji">😞</view>
+        <view class="quick-text">记小不满</view>
+      </view>
+      <view class="quick-item" bindtap="goNotes">
+        <view class="quick-emoji">📒</view>
+        <view class="quick-text">全部记录</view>
+      </view>
+      <view class="quick-item" bindtap="goHistory">
+        <view class="quick-emoji">📈</view>
+        <view class="quick-text">分数追踪</view>
+      </view>
+    </view>
+  </block>
+</view>

@@ -1,0 +1,29 @@
+.head-card {
+  margin-top: 30rpx;
+}
+
+.note-content {
+  margin-top: 16rpx;
+  font-size: 28rpx;
+}
+
+.note-foot {
+  margin-top: 16rpx;
+}
+
+.del {
+  color: #b9b0ab;
+  font-size: 24rpx;
+}
+
+.fab {
+  position: fixed;
+  left: 24rpx;
+  right: 24rpx;
+  bottom: 40rpx;
+  margin-top: 0;
+}
+
+.fab-space {
+  height: 140rpx;
+}

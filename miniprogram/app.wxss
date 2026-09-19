@@ -1,0 +1,147 @@
+page {
+  background: #fff8f6;
+  color: #3d3a3a;
+  font-size: 28rpx;
+  line-height: 1.6;
+}
+
+button {
+  background: initial;
+}
+
+button:focus {
+  outline: 0;
+}
+
+button::after {
+  border: none;
+}
+
+/* ---- 通用卡片 ---- */
+.card {
+  background: #ffffff;
+  border-radius: 24rpx;
+  padding: 28rpx;
+  margin: 20rpx 24rpx;
+  box-shadow: 0 8rpx 30rpx rgba(255, 107, 129, 0.07);
+}
+
+.title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #3d3a3a;
+  margin-bottom: 8rpx;
+}
+
+.muted {
+  color: #9a938f;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+.center {
+  text-align: center;
+}
+
+.row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.row-between {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ---- 按钮 ---- */
+.btn-primary {
+  background: linear-gradient(135deg, #ff8a9e, #ff6b81);
+  color: #ffffff;
+  border-radius: 44rpx;
+  font-size: 30rpx;
+  padding: 4rpx 0;
+  margin-top: 20rpx;
+}
+
+.btn-disabled {
+  opacity: 0.45;
+}
+
+.btn-plain {
+  background: #fff0f2;
+  color: #ff6b81;
+  border-radius: 44rpx;
+  font-size: 28rpx;
+  padding: 4rpx 0;
+  margin-top: 20rpx;
+}
+
+.mini {
+  font-size: 26rpx;
+  padding: 0 28rpx;
+  margin: 0 0 0 16rpx;
+  line-height: 2.4;
+  display: inline-block;
+}
+
+.link {
+  color: #ff6b81;
+  font-size: 26rpx;
+}
+
+/* ---- 标签 ---- */
+.tag {
+  font-size: 22rpx;
+  padding: 4rpx 16rpx;
+  border-radius: 20rpx;
+  display: inline-block;
+}
+
+.tag-happy {
+  color: #ff6b81;
+  background: #ffedef;
+}
+
+.tag-unhappy {
+  color: #5b8def;
+  background: #eaf1ff;
+}
+
+/* ---- 空状态 ---- */
+.empty {
+  text-align: center;
+  padding: 80rpx 0;
+}
+
+.empty-emoji {
+  font-size: 80rpx;
+  margin-bottom: 16rpx;
+}
+
+.empty-mini {
+  padding: 30rpx 0 10rpx;
+  text-align: center;
+}
+
+/* ---- 输入 ---- */
+.content-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: #fff8f6;
+  border-radius: 16rpx;
+  padding: 20rpx;
+  margin-top: 20rpx;
+  min-height: 140rpx;
+  font-size: 28rpx;
+}
+
+.ann-input {
+  flex: 1;
+  background: #fff8f6;
+  border-radius: 32rpx;
+  padding: 12rpx 24rpx;
+  font-size: 26rpx;
+}

@@ -1,0 +1,15 @@
+<view class="page">
+  <view class="empty" wx:if="{{!rows.length}}">
+    <view class="empty-emoji">📔</view>
+    <view class="muted">还没有交换过的周期，完成第一次交换后这里就有了</view>
+  </view>
+
+  <view class="card row-between cycle-item" wx:for="{{rows}}" wx:key="cycleId" bindtap="goDetail"
+    data-id="{{item.cycleId}}">
+    <view>
+      <view class="cycle-title">第 {{item.index}} 期</view>
+      <view class="muted">{{item.dateText}}</view>
+    </view>
+    <view class="score-pill">我 {{item.myScore == null ? '—' : item.myScore}} · TA {{item.partnerScore == null ? '—' : item.partnerScore}} ›</view>
+  </view>
+</view>

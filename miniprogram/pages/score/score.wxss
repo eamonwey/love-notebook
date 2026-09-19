@@ -1,0 +1,20 @@
+.big-score {
+  text-align: center;
+  font-size: 96rpx;
+  font-weight: 700;
+  color: #ff6b81;
+  margin: 40rpx 0 10rpx;
+}
+
+.big-emoji {
+  font-size: 60rpx;
+  margin-left: 16rpx;
+}
+
+.scale-hints {
+  margin-top: 8rpx;
+}
+
+.event-panel {
+  border: 2rpx dashed #ffb7c3;
+}
