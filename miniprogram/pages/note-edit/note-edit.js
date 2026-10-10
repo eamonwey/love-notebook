@@ -2,6 +2,7 @@ const api = require('../../services/api.js');
 const tap = require('../../utils/tap.js');
 
 const DRAFT_KEY = 'LOVE_NOTE_DRAFT';
+const DRAFT_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 
 Page({
   data: {
@@ -10,13 +11,19 @@ Page({
   },
 
   onLoad(options) {
-    if (options && (options.type === 'unhappy' || options.type === 'happy')) {
-      this.setData({ type: options.type });
-    }
+    // URL 上的类型（首页「记开心事 / 记小不满」快捷入口）优先级最高
+    const urlType = options && (options.type === 'unhappy' || options.type === 'happy') ? options.type : '';
+    if (urlType) this.setData({ type: urlType });
     // 恢复未保存成功的草稿（例如内容被安全检测拦下后离开页面）
     const draft = wx.getStorageSync(DRAFT_KEY);
-    if (draft && draft.content) {
-      this.setData({ type: draft.type || this.data.type, content: draft.content });
+    const savedAt = draft && draft.savedAt ? Number(draft.savedAt) : Date.now();
+    const draftFresh = draft && savedAt > Date.now() - DRAFT_MAX_AGE;
+    if (draft && !draftFresh) wx.removeStorageSync(DRAFT_KEY);
+    if (draftFresh && draft.content) {
+      if (!draft.savedAt) wx.setStorageSync(DRAFT_KEY, Object.assign({}, draft, { savedAt: savedAt }));
+      // 草稿只负责恢复内容，类型以本次入口为准，
+      // 否则从「记小不满」进来会被上次的草稿悄悄改成开心
+      this.setData({ type: urlType || draft.type || this.data.type, content: draft.content });
     }
   },
 
@@ -31,7 +38,7 @@ Page({
   },
 
   saveDraft() {
-    wx.setStorageSync(DRAFT_KEY, { type: this.data.type, content: this.data.content });
+    wx.setStorageSync(DRAFT_KEY, { type: this.data.type, content: this.data.content, savedAt: Date.now() });
   },
 
   onSave() {

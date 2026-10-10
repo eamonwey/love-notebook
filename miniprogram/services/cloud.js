@@ -20,15 +20,9 @@ function doInit() {
     return Promise.reject(new Error('CLOUD_ENV_NOT_SET'));
   }
   wx.cloud.init({ env: config.cloudEnvId, traceUser: true });
-  return wx.cloud
-    .callFunction({ name: 'login', data: { action: 'me', payload: {} } })
-    .then((res) => {
-      if (!res.result || !res.result.ok) {
-        throw new Error((res.result && res.result.error) || '登录失败');
-      }
-      inited = true;
-      return res.result.data;
-    });
+  // 业务云函数通过 getWXContext 获取身份，无需前置 login 网络请求。
+  inited = true;
+  return Promise.resolve();
 }
 
 function ensureInit() {
@@ -51,12 +45,18 @@ function call(name, action, payload) {
     .then((res) => {
       const r = res.result;
       if (r && r.ok) return r.data;
-      throw new Error((r && r.error) || ('云函数 ' + name + '.' + action + ' 调用失败'));
+      const error = new Error((r && r.error) || ('云函数 ' + name + '.' + action + ' 调用失败'));
+      error.diagnostic = r && r.diagnostic;
+      error.requestId = res.requestID || res.requestId || '';
+      throw error;
     });
 }
 
 module.exports = {
   isMock: false,
+  getGiftState: function () { return call('cycle', 'getGiftState'); },
+  sendGift: function (payload) { return call('cycle', 'sendGift', payload); },
+  acknowledgeGift: function (id) { return call('cycle', 'acknowledgeGift', Array.isArray(id) ? { ids: id } : { id: id }); },
   isEnvConfigured: isEnvConfigured,
 
   init: function () {
@@ -65,6 +65,9 @@ module.exports = {
 
   getAppStatus: function () {
     return call('cycle', 'getCurrent');
+  },
+  getExchangePage: function (cycleId) {
+    return call('cycle', 'getExchangePage', { cycleId: cycleId });
   },
   submitScore: function (p) {
     return call('cycle', 'submitScore', p);
@@ -77,12 +80,6 @@ module.exports = {
   },
   agreeExchange: function () {
     return call('cycle', 'agreeExchange');
-  },
-  setExchangePlan: function (p) {
-    return call('cycle', 'setExchangePlan', p);
-  },
-  clearExchangePlan: function () {
-    return call('cycle', 'clearExchangePlan');
   },
   getCycleDetail: function (cycleId) {
     return call('cycle', 'getDetail', { cycleId: cycleId });
@@ -100,6 +97,15 @@ module.exports = {
   annotate: function (p) {
     return call('note', 'annotate', p);
   },
+  deleteAnnotation: function (p) {
+    return call('note', 'removeAnnotation', p);
+  },
+  getUnreadReplies: function () {
+    return call('note', 'unreadReplies');
+  },
+  markRepliesRead: function (upTo) {
+    return call('note', 'markRepliesRead', { upTo: upTo });
+  },
 
   addEvent: function (p) {
     return call('track', 'addEvent', p);
@@ -107,15 +113,17 @@ module.exports = {
   deleteEvent: function (id) {
     return call('track', 'remove', { id: id });
   },
-  getHistory: function () {
-    return call('track', 'history');
+  getHistory: function (payload) {
+    return call('track', 'history', payload);
   },
+  getCycleEvents: function (payload) { return call('track', 'cycleEvents', payload); },
 
   updateCycleDays: function (days) {
     return call('pair', 'updateCycleDays', { days: days });
   },
-  pairCreate: function () {
-    return call('pair', 'create');
+  updateDiamondAllowance: function (amount) { return call('pair', 'updateDiamondAllowance', { amount: amount }); },
+  pairCreate: function (days) {
+    return call('pair', 'create', { days: days });
   },
   pairJoin: function (code) {
     return call('pair', 'join', { code: code });

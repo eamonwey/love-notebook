@@ -9,7 +9,7 @@ const db = cloud.database();
 
 // ===== 内容安全 =====
 // 用户输入文本统一过微信 msgSecCheck 2.0（场景：4 社交日志）。
-// 判定违规：拒绝保存；接口自身故障（权限/频率/网络）：放行并记日志，不阻断主流程。
+// 判定违规或安全接口故障时均拒绝本次保存，避免审核不可用时违规内容落库。
 async function msgSecCheck(openid, content) {
   let res = null;
   try {
@@ -24,8 +24,8 @@ async function msgSecCheck(openid, content) {
     if (errCode === 87014 || String((e && (e.errMsg || e.message)) || '').indexOf('87014') >= 0) {
       throw new Error('内容可能包含平台不允许的文字（微信安全检测），请调整后重试');
     }
-    console.error('msgSecCheck error, allow content:', e && (e.errCode || e.errMsg || e.message));
-    return;
+    console.error('msgSecCheck unavailable:', e && (e.errCode || e.errMsg || e.message));
+    throw new Error('内容安全检测暂时不可用，请稍后重试');
   }
   if (res && res.result && res.result.suggest && res.result.suggest !== 'pass') {
     throw new Error('内容可能包含平台不允许的文字（微信安全检测），请调整后重试');
@@ -65,6 +65,12 @@ async function usersMap(pair) {
     map[pair.users[i]] = { name: res.data[0] ? res.data[0].nickname : '微信用户' };
   }
   return map;
+}
+
+// 事件作者只以「昵称」对外，openid 一律不下发到前端
+function nameOf(map, oid, openid) {
+  const name = map && map[oid] && map[oid].name ? map[oid].name : '';
+  return name || (oid === openid ? '我' : 'TA');
 }
 
 const handlers = {
@@ -109,7 +115,8 @@ const handlers = {
       createdAt: Date.now(),
     };
     const add = await db.collection('events').add({ data: data });
-    return Object.assign({ _id: add._id, id: add._id }, data);
+    return { id: add._id, cycleId: cycle._id, cycleIndex: cycle.index,
+      prevScore, newScore, reason, date, createdAt: data.createdAt, mine: true, authorName: '我' };
   },
 
   // 删除事件：只能删除自己添加的
@@ -124,44 +131,102 @@ const handlers = {
   async history(payload, openid) {
     const u = await getUser(openid);
     const pair = await getPair(u.pairId);
+    if (!pair || pair.status === 'archived' || !pair.users.includes(openid)) throw new Error('配对已失效');
     const partner = partnerOf(pair, openid);
+    const pageSize = payload.pageSize === undefined ? 100 : payload.pageSize;
+    if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100) throw new Error('分页数量无效');
+    if (payload.beforeIndex !== undefined && (!Number.isInteger(payload.beforeIndex) || payload.beforeIndex < 1)) throw new Error('分页位置无效');
+    const condition = { pairId: pair._id, status: db.command.in(['exchanged', 'archived']) };
+    if (payload.beforeIndex !== undefined) condition.index = db.command.lt(payload.beforeIndex);
+    // 倒序取「最近 100 期」再翻正为时间正序（原实现 asc + limit 取到的是最早的 100 期，
+    // 界面提示却写「仅显示最近 100 期」，期数过百时会丢掉最新数据）
     const cyc = await db
       .collection('cycles')
-      .where({ pairId: pair._id, status: 'exchanged' })
-      .orderBy('index', 'asc')
-      .limit(100)
+      .where(condition)
+      .orderBy('index', 'desc')
+      .limit(pageSize + 1)
       .get();
-    const cycTotal = (await db.collection('cycles').where({ pairId: pair._id, status: 'exchanged' }).count()).total;
-    const rows = cyc.data.map((c) => ({
-      cycleId: c._id,
-      index: c.index,
-      startDate: c.startDate,
-      endDate: c.endDate,
-      exchangedAt: c.exchangedAt,
-      myScore: c.scores && c.scores[openid] ? c.scores[openid].score : null,
-      partnerScore: partner && c.scores && c.scores[partner] ? c.scores[partner].score : null,
-    }));
+    const hasMore = cyc.data.length > pageSize;
+    cyc.data = cyc.data.slice(0, pageSize);
+    const cycTotal = payload.pageSize !== undefined ? 0 : (await db.collection('cycles').where({ pairId: pair._id, status: db.command.in(['exchanged', 'archived']) }).count()).total;
+    const rows = cyc.data
+      .slice()
+      .reverse()
+      .map((c) => ({
+        cycleId: c._id,
+        index: c.index,
+        startDate: c.startDate,
+        endDate: c.endDate,
+        exchangedAt: c.exchangedAt,
+        gap: c.status === 'archived', pausedAt: c.pausedAt || null, resumedAt: c.resumedAt || null,
+        myScore: c.status === 'exchanged' && c.scores && c.scores[openid] ? c.scores[openid].score : null,
+        partnerScore: c.status === 'exchanged' && partner && c.scores && c.scores[partner] ? c.scores[partner].score : null,
+      }));
+    if (payload.pageSize !== undefined) {
+      await Promise.all(rows.map(async (r) => {
+        r.eventCount = r.gap ? 0 : (await db.collection('events').where({ pairId: pair._id, cycleId: r.cycleId }).count()).total;
+      }));
+      const active = (await db.collection('cycles').where({ pairId: pair._id, status: 'active' }).limit(1).get()).data[0];
+      return { rows, events: [], hasMore, nextBeforeIndex: hasMore && rows.length ? rows[0].index : null,
+        activeCycle: active ? { id: active._id, index: active.index } : null, cyclesTruncated: hasMore, eventsTruncated: false };
+    }
     const ev = await db.collection('events').where({ pairId: pair._id }).orderBy('createdAt', 'desc').limit(200).get();
     const evTotal = (await db.collection('events').where({ pairId: pair._id }).count()).total;
     const map = await usersMap(pair);
-    // 可见性规则与分数一致：进行中周期的事件仅本人可见，交换后双方可见
-    const exchangedIds = {};
-    cyc.data.forEach((c) => {
-      exchangedIds[c._id] = true;
-    });
+    // 只有实际交换过的事件才向对方公开；中断期不能因归档而解锁。
+    // 超出图表窗口的事件按其所属周期状态核实，不从最近100期反推。
+    const act = await db.collection('cycles').where({ pairId: pair._id, status: 'active' }).limit(20).get();
+    const cycleStates = {};
+    cyc.data.concat(act.data).forEach((c) => { cycleStates[c._id] = c.status; });
+    await Promise.all([...new Set(ev.data.filter((e) => e.author !== openid).map((e) => e.cycleId))].map(async (id) => {
+      if (cycleStates[id]) return;
+      const c = await getDoc('cycles', id);
+      cycleStates[id] = c && c.pairId === pair._id ? c.status : 'unknown';
+    }));
     const events = ev.data
-      .filter((e) => e.author === openid || exchangedIds[e.cycleId])
-      .map((e) => Object.assign({}, e, { id: e._id, authorName: map[e.author] ? map[e.author].name : '微信用户' }));
-    const act = await db.collection('cycles').where({ pairId: pair._id, status: 'active' }).limit(1).get();
+      .filter((e) => e.author === openid || cycleStates[e.cycleId] === 'exchanged')
+      .map((e) => ({
+        id: e._id,
+        cycleId: e.cycleId,
+        cycleIndex: e.cycleIndex,
+        prevScore: e.prevScore,
+        newScore: e.newScore,
+        reason: e.reason,
+        date: e.date,
+        createdAt: e.createdAt,
+        mine: e.author === openid,
+        authorName: nameOf(map, e.author, openid),
+      }));
     const active = act.data[0];
     return {
       rows: rows,
       events: events,
       activeCycle: active ? { id: active._id, index: active.index } : null,
-      // 截断标记：超限时前端会提示（避免旧数据看起来像丢了）
+      // 截断标记：按「未经过滤的原始条数」判断，否则对方进行中的事件被隐藏会被误报成截断
       cyclesTruncated: cycTotal > rows.length,
-      eventsTruncated: evTotal > events.length,
+      eventsTruncated: evTotal > ev.data.length,
+      hasMore, nextBeforeIndex: hasMore && rows.length ? rows[0].index : null,
     };
+  },
+
+  async cycleEvents(payload, openid) {
+    const u = await getUser(openid);
+    const pair = await getPair(u.pairId);
+    const cycle = typeof payload.cycleId === 'string' ? await getDoc('cycles', payload.cycleId) : null;
+    if (!pair || pair.status === 'archived' || !pair.users.includes(openid) || !cycle || cycle.pairId !== pair._id) throw new Error('周期不存在');
+    const condition = { pairId: pair._id, cycleId: cycle._id };
+    if (cycle.status !== 'exchanged') condition.author = openid;
+    if (payload.beforeId !== undefined) {
+      if (typeof payload.beforeId !== 'string' || !payload.beforeId || payload.beforeId.length > 128) throw new Error('分页位置无效');
+      condition._id = db.command.lt(payload.beforeId);
+    }
+    const result = await db.collection('events').where(condition).orderBy('_id', 'desc').limit(51).get();
+    const map = await usersMap(pair);
+    const page = result.data.slice(0, 50);
+    return { events: page.map((e) => ({ id: e._id, cycleId: e.cycleId, cycleIndex: e.cycleIndex,
+      prevScore: e.prevScore, newScore: e.newScore, reason: e.reason, date: e.date, createdAt: e.createdAt,
+      mine: e.author === openid, authorName: nameOf(map, e.author, openid) })),
+      nextBeforeId: result.data.length > 50 ? page[page.length - 1]._id : null };
   },
 };
 
@@ -173,6 +238,8 @@ exports.main = async (event) => {
     const data = await handler(event.payload || {}, OPENID);
     return { ok: true, data: data };
   } catch (e) {
-    return { ok: false, error: e.message };
+    const internal = e && (e.errCode !== undefined || e.errcode !== undefined || e.name === 'TypeError');
+    if (internal) console.error('[track] internal request failure:', e);
+    return { ok: false, error: internal ? '服务暂时不可用，请稍后重试' : e.message };
   }
 };

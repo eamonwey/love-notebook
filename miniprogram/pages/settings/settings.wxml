@@ -1,4 +1,16 @@
 <view class="page">
+  <gift-hub />
+  <view class="card" wx:if="{{!isMock}}">
+    <view class="title">我的昵称</view>
+    <view class="nickname-current">当前昵称：{{myName || '加载中…'}}</view>
+    <view class="muted">TA 会看到这个称呼。输入新昵称后点击保存，最多 20 个字。</view>
+    <view class="row form-row">
+      <input class="days-input" placeholder="输入新的昵称" maxlength="20" value="{{nickname}}" bindinput="onNickname" disabled="{{savingNickname}}" />
+      <button class="btn-primary mini" bindtap="saveNickname" loading="{{savingNickname}}" disabled="{{savingNickname || !nickname}}">保存昵称</button>
+    </view>
+    <view class="muted nickname-help">随时可以修改，不影响伴侣绑定和已有记录。</view>
+  </view>
+
   <view class="card" wx:if="{{isMock}}">
     <view class="title">演示身份（仅本地调试）</view>
     <view class="muted">当前处于本地演示模式，以「{{myName}}」操作。真实使用请接入云开发，用微信邀请绑定另一半，在两台手机上各自操作。</view>
@@ -23,7 +35,7 @@
 
   <view class="card">
     <view class="title">交换周期</view>
-    <view class="muted">当前每 {{cycleDays}} 天一期，修改后下一期生效。</view>
+    <view class="muted">当前每 {{cycleDays}} 天一期，以北京时间零点为分界，开始当天算第 1 天。修改后下一期生效。</view>
     <view class="days-row row">
       <view class="day-chip {{cycleDays === item ? 'day-on' : ''}}" wx:for="{{[3, 7, 14, 30]}}" wx:key="*this"
         bindtap="pickDays" data-days="{{item}}">{{item}}天</view>
@@ -34,16 +46,20 @@
     </view>
   </view>
 
+  <view class="card">
+    <view class="title">每周期钻石额度</view>
+    <view class="muted">每人每期 {{diamondAllowance}} 颗，双方使用同一额度。任意一方修改后，下一期生效，本期余额不变。</view>
+    <view class="muted">可设为 0–100 的整数；0 表示不发放钻石。每期重置，不累加。</view>
+    <view class="row days-custom" wx:if="{{canSetDiamonds}}">
+      <input class="days-input" type="number" maxlength="3" placeholder="输入0–100" value="{{customDiamonds}}" bindinput="onCustomDiamonds" disabled="{{savingDiamonds}}" />
+      <button class="btn-primary mini" bindtap="saveDiamonds" loading="{{savingDiamonds}}" disabled="{{savingDiamonds}}">保存额度</button>
+    </view>
+    <view class="muted" wx:else>完成双方配对后可修改。</view>
+  </view>
+
   <view class="card" wx:if="{{isMock}}">
     <view class="title">演示数据</view>
     <view class="muted">想从头体验一遍完整流程？重置后所有本地数据清空。</view>
     <button class="btn-plain" bindtap="resetData">重置演示数据</button>
-  </view>
-
-  <view class="card">
-    <view class="title">关于</view>
-    <view class="muted">恋恋温度计 v0.2.0</view>
-    <view class="muted">周期打分（0-10）· 感受笔记与批注 · 定期交换 · 分数追踪</view>
-    <view class="muted">当前模式：{{isMock ? '本地演示' : '微信云开发'}}</view>
   </view>
 </view>

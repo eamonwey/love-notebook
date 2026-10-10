@@ -24,6 +24,7 @@
     "packNpmRelationList": [],
     "minifyWXSS": true,
     "minifyWXML": true,
+    "ignoreDevUnusedFiles": false,
     "babelSetting": {
       "ignore": [],
       "disablePlugins": [],

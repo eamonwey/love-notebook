@@ -48,6 +48,15 @@
   border-top: none;
 }
 
+/* 从首页小铃铛跳进来时高亮被回复的那条记录 */
+.note-block-focus {
+  background: #fff4f5;
+  border-radius: 16rpx;
+  padding-left: 16rpx;
+  padding-right: 16rpx;
+  box-shadow: inset 0 0 0 2rpx #ffd7dd;
+}
+
 .note-head {
   padding: 4rpx 0;
 }
@@ -57,6 +66,12 @@
   border-radius: 16rpx;
   padding: 20rpx;
   margin-top: 14rpx;
+}
+
+.note-time {
+  font-size: 20rpx;
+  color: #b9b0ab;
+  margin-bottom: 6rpx;
 }
 
 .note-content {
@@ -69,6 +84,15 @@
   color: #7c7570;
 }
 
+.ann-time {
+  font-size: 20rpx;
+  color: #b9b0ab;
+}
+
+.ann-content {
+  margin-top: 2rpx;
+}
+
 .ann-author {
   color: #ff6b81;
   font-weight: 600;
@@ -76,6 +100,24 @@
 
 .ann-input-row {
   margin-top: 16rpx;
+}
+
+.ann-editor {
+  display: block;
+  width: 100%;
+  height: 224rpx;
+  box-sizing: border-box;
+  padding: 20rpx;
+  background: #ffffff;
+  border: 2rpx solid #f0d9dd;
+  border-radius: 16rpx;
+  font-size: 28rpx;
+  line-height: 44rpx;
+  color: #493c40;
+}
+
+.ann-editor-actions {
+  margin-top: 12rpx;
 }
 
 .req-banner {
@@ -88,21 +130,4 @@
 .req-text {
   font-size: 28rpx;
   margin-bottom: 12rpx;
-}
-
-.plan-section {
-  border-top: 2rpx solid #f6ecea;
-  margin-top: 24rpx;
-  padding-top: 20rpx;
-}
-
-.plan-title {
-  font-size: 26rpx;
-  color: #7c7570;
-  font-weight: 600;
-}
-
-.plan-value {
-  font-size: 30rpx;
-  margin: 14rpx 0;
 }

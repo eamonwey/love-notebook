@@ -1,4 +1,5 @@
 <view class="page">
+  <gift-hub />
   <view class="empty" wx:if="{{!rows.length}}">
     <view class="empty-emoji">📔</view>
     <view class="muted">还没有交换过的周期，完成第一次交换后这里就有了</view>

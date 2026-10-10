@@ -1,5 +1,6 @@
 <view class="page">
-  <view class="card">
+  <gift-hub />
+  <view class="card" wx:if="{{!saved}}">
     <view class="title">第 {{cycleIndex}} 期感受打分</view>
     <view class="muted">0 分很糟糕，10 分非常幸福。打分仅针对当前周期，交换后对方才能看到。</view>
 
@@ -16,7 +17,15 @@
       value="{{comment}}" bindinput="onComment" maxlength="200" />
   </view>
 
-  <button class="btn-primary" bindtap="onSave">保存打分</button>
+  <button wx:if="{{!saved}}" class="btn-primary" bindtap="onSave">保存打分</button>
+
+  <view class="card" wx:if="{{saved}}">
+    <view class="title">{{autoExchanged ? '本期已交换，分数已锁定' : '打分已保存，等TA来交换'}}</view>
+    <view class="muted" wx:if="{{!autoExchanged}}">分享给TA，提醒完成打分并交换。卡片不会显示你的分数或留言。</view>
+    <button wx:if="{{!autoExchanged}}" class="btn-primary" open-type="share">分享给TA，提醒交换</button>
+    <button wx:if="{{!autoExchanged}}" class="btn-plain" bindtap="onEditScore" loading="{{checkingEdit}}" disabled="{{checkingEdit}}">继续修改打分</button>
+    <button class="btn-plain" bindtap="goExchange">{{autoExchanged ? '查看交换结果' : '前往交换中心'}}</button>
+  </view>
 
   <view class="card" wx:if="{{showEvent}}">
     <view class="title">分数变化了：{{prevScore}} → {{score}}</view>

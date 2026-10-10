@@ -1,16 +1,19 @@
 <view class="page">
+  <gift-hub />
   <view class="card head-card" wx:if="{{cycle}}">
     <view class="row-between">
       <view class="title">第 {{cycle.index}} 期 · 我的记录</view>
       <view class="link" bindtap="goAdd">＋ 添加</view>
     </view>
-    <view class="muted">随时记下开心与不满。交换之后TA才能看到这些笔记，并且可以写下批注。</view>
+    <view class="muted">交换前笔记仅自己可见；本期交换后、次日0点前仍可补充笔记，新增内容立即对TA可见，并可互写批注。</view>
   </view>
 
   <view class="empty" wx:if="{{cycle && notes.length === 0}}">
     <view class="empty-emoji">📒</view>
     <view class="muted">本期还没有记录，随手记一笔吧</view>
   </view>
+
+  <view class="muted list-warning" wx:if="{{notesTruncated}}">本期记录较多，目前只显示最近 100 条。</view>
 
   <view class="card note-item" wx:for="{{notes}}" wx:key="id">
     <view class="row-between">

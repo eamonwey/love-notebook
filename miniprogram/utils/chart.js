@@ -2,11 +2,19 @@
  * 轻量折线图（canvas 2d）：双人对期分数曲线 + 事件标记
  * 返回落点坐标数组，供页面做点击命中。
  */
-function drawLineChart(canvas, width, height, dpr, rows, colors) {
+function drawLineChart(canvas, width, height, dpr, rows, colors, layout) {
   const ctx = canvas.getContext('2d');
-  canvas.width = width * dpr;
-  canvas.height = height * dpr;
-  ctx.scale(dpr, dpr);
+  // skipResize：调用方已初始化过画布（虚拟滚动的高频重绘），复用上下文，
+  // 避免每次重绘都重置画布（重新分配缓冲区 + 清空状态）造成滚动掉帧。
+  if (!layout || !layout.skipResize) {
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.scale(dpr, dpr);
+  }
+  ctx.clearRect(0, 0, width, height);
+  const fontSize = layout && layout.fontSize || 11;
+  const labelColor = layout && layout.labelColor || '#B9B0AB';
+  ctx.font = fontSize + 'px sans-serif';
 
   const padL = 34;
   const padR = 20;
@@ -14,9 +22,6 @@ function drawLineChart(canvas, width, height, dpr, rows, colors) {
   const padB = 34;
   const w = width - padL - padR;
   const h = height - padT - padB;
-
-  ctx.clearRect(0, 0, width, height);
-  ctx.font = '11px sans-serif';
 
   // 横向网格 + 纵轴刻度
   [0, 2, 4, 6, 8, 10].forEach((v) => {
@@ -27,7 +32,7 @@ function drawLineChart(canvas, width, height, dpr, rows, colors) {
     ctx.moveTo(padL, y);
     ctx.lineTo(padL + w, y);
     ctx.stroke();
-    ctx.fillStyle = '#B9B0AB';
+    ctx.fillStyle = labelColor;
     ctx.textAlign = 'right';
     ctx.fillText(String(v), padL - 6, y + 4);
   });
@@ -35,11 +40,12 @@ function drawLineChart(canvas, width, height, dpr, rows, colors) {
   const n = rows.length;
   const toY = (s) => padT + h - (s / 10) * h;
   const points = rows.map((r, i) => {
-    const x = padL + (n === 1 ? w / 2 : (i / (n - 1)) * w);
+    const x = padL + (layout ? layout.offset + i * layout.step : (n === 1 ? w / 2 : (i / (n - 1)) * w));
     return {
       x,
       index: r.index,
       row: r,
+      event: r.eventCount > 0 ? { x, y: padT - 14 } : null,
       my: r.myScore == null ? null : { x, y: toY(r.myScore) },
       ta: r.partnerScore == null ? null : { x, y: toY(r.partnerScore) },
     };
@@ -51,7 +57,7 @@ function drawLineChart(canvas, width, height, dpr, rows, colors) {
     ctx.beginPath();
     let started = false;
     points.forEach((p) => {
-      if (!p[key]) return;
+      if (!p[key] || p.row.gap) { started = false; return; }
       if (!started) {
         ctx.moveTo(p[key].x, p[key].y);
         started = true;
@@ -73,11 +79,19 @@ function drawLineChart(canvas, width, height, dpr, rows, colors) {
   };
 
   // 先画 TA 再画我，我的线在上层
+  ctx.save();
+  ctx.beginPath();
+  // 圆点半径 4.5px + 描边半宽 1.25px，裁剪留白必须覆盖完整外轮廓。
+  ctx.rect(padL - 8, 0, w + 16, height);
+  ctx.clip();
   drawLine('ta', colors.partner);
   drawLine('my', colors.me);
+  ctx.restore();
 
   // 事件徽标 + 期数标签
   points.forEach((p) => {
+    // 原生滚动/布局可能保留亚像素误差，不让边界上的期数和事件突然消失。
+    if (p.x < padL - 1 || p.x > padL + w + 1) { p.event = null; return; }
     if (p.row.eventCount > 0) {
       ctx.fillStyle = '#FFB300';
       ctx.beginPath();
@@ -87,11 +101,11 @@ function drawLineChart(canvas, width, height, dpr, rows, colors) {
       ctx.textAlign = 'center';
       ctx.font = '10px sans-serif';
       ctx.fillText(String(p.row.eventCount), p.x, padT - 10);
-      ctx.font = '11px sans-serif';
+      ctx.font = fontSize + 'px sans-serif';
     }
-    ctx.fillStyle = '#B9B0AB';
+    ctx.fillStyle = labelColor;
     ctx.textAlign = 'center';
-    ctx.fillText('第' + p.index + '期', p.x, padT + h + 18);
+    ctx.fillText(p.row.gap ? '暂停' : '第' + p.index + '期', p.x, padT + h + 18);
   });
 
   return points;

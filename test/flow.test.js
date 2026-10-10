@@ -2,7 +2,7 @@
  * 双人全流程测试（纯 Node，不需要微信开发者工具）。
  * 通过 stub 全局 wx 存储 API，直接驱动 mock 服务，验证全部业务规则：
  *   功能1 周期打分 + 交换门槛（一方未打分不能交换，交换前不可见）
- *   功能2 感受笔记（随时记录、交换后可见并可批注、交换后不可删）
+ *   功能2 感受笔记（随时记录、交换后可见并可批注、自己的内容可删除）
  *   功能3 周期管理（周期长度自定义、分数仅限当前周期）
  *   功能4 分数变化事件（变化提示记录 + 手动记录 + 历史追踪）
  */
@@ -20,6 +20,7 @@ global.wx = {
 };
 
 const api = require('../miniprogram/services/mock.js');
+const { advanceTo } = require('./clock');
 
 async function expectThrow(promise, keyword) {
   try {
@@ -50,15 +51,15 @@ function ok(label) {
   assert.strictEqual(s.bothScored, false);
   ok('首次启动自动创建第 1 期，双方均未打分');
 
-  // 没有直接交换入口：必须一方发起请求、对方同意
-  await api.requestExchange();
+  // 交换门槛一：发起方自己必须先完成本期打分
+  await expectThrow(api.requestExchange(), '打分');
   api.setMe('userB');
-  await expectThrow(api.agreeExchange(), '完成打分');
-  ok('双方都未打分时，同意交换被拒绝');
+  await expectThrow(api.requestExchange(), '打分');
+  await expectThrow(api.agreeExchange(), '没有待处理');
+  ok('双方都未打分时，发不出交换请求，也没有可同意的请求');
 
   // A 打分（含校验）
   api.setMe('userA');
-  await api.requestExchange(); // 自己重复发起：静默覆盖刷新，不报错
   await expectThrow(api.submitScore({ score: 11, comment: '' }), '0-10');
   ok('分数超出 0-10 会被拒绝');
 
@@ -68,6 +69,15 @@ function ok(label) {
   s = await api.getAppStatus();
   assert.strictEqual(s.myScore.score, 8);
   assert.strictEqual(s.bothScored, false);
+  ok('A 完成本期打分（8 分）');
+
+  // 交换门槛二：自己打完分后才能发起请求；重复发起是幂等刷新
+  let reqRes = await api.requestExchange();
+  assert.strictEqual(reqRes.resent, false);
+  reqRes = await api.requestExchange();
+  assert.strictEqual(reqRes.resent, true);
+  ok('A 打完分后可以发起交换请求，重复发起幂等刷新');
+
   api.setMe('userB');
   await expectThrow(api.agreeExchange(), '完成打分');
   ok('只有 A 打分时，同意交换仍被拒绝');
@@ -83,10 +93,13 @@ function ok(label) {
   await api.submitScore({ score: 7, comment: '还行' });
   r = await api.agreeExchange();
   assert.ok(r.exchangedCycleId);
+  assert.strictEqual((await api.getAppStatus()).cycle.index, 1);
+  assert.strictEqual((await api.getAppStatus()).cycle.status, 'exchanged');
+  advanceTo(r.nextOpenAt);
   s = await api.getAppStatus();
   assert.strictEqual(s.cycle.index, 2);
   assert.strictEqual(s.myScore, null);
-  ok('B 打分后同意请求，交换成功，自动进入第 2 期');
+  ok('B 打分后同意请求，交换当天留在本期，次日0点进入第2期');
 
   api.setMe('userA');
   const d1 = await api.getCycleDetail(r.exchangedCycleId);
@@ -157,30 +170,47 @@ function ok(label) {
   await api.submitScore({ score: 9, comment: '更好了' });
   r = await api.agreeExchange();
   ok('B 打分后同意再次发起的请求，完成第 2 期交换');
+  advanceTo(r.nextOpenAt);
 
   const d2 = await api.getCycleDetail(r.exchangedCycleId);
   assert.strictEqual(d2.notes.length, 2);
-  const aNote = d2.notes.find((n) => n.author === 'userA');
+  // 对外只给昵称，不给 userA/userB 这类内部标识
+  const aNote = d2.notes.find((n) => n.authorName === '小A');
   assert.ok(aNote, '交换后应能看到 A 的笔记');
   await api.annotate({ noteId: aNote.id, content: '下次早点说呀' });
   const d2again = await api.getCycleDetail(r.exchangedCycleId);
   const aNote2 = d2again.notes.find((n) => n.id === aNote.id);
   assert.strictEqual(aNote2.annotations.length, 1);
   assert.strictEqual(aNote2.annotations[0].authorName, '小B');
+  assert.strictEqual(aNote2.annotations[0].mine, true, 'B 视角下这条批注是自己的');
+  assert.strictEqual(aNote2.mine, false, 'B 视角下 A 的记录不是自己的');
+  assert.strictEqual(aNote2.authorName, '小A');
+  const rawNote = JSON.stringify(d2again);
+  assert.ok(
+    rawNote.indexOf('userA') < 0 && rawNote.indexOf('userB') < 0,
+    '记录/批注只应对外暴露昵称，不能把内部身份标识下发到页面数据'
+  );
   ok('交换后 B 看到双方笔记，并成功批注 A 的笔记');
+  ok('记录与批注的作者只给昵称，内部标识不下发');
 
   const hB2 = await api.getHistory();
   assert.ok(hB2.events.some((e) => e.reason === '为旅行计划吵架'));
   ok('交换后，对方可以看到该期的分数变化事件');
 
   api.setMe('userA');
-  const bNote = d2.notes.find((n) => n.author === 'userB');
+  const bNote = d2.notes.find((n) => n.authorName === '小B');
   await expectThrow(api.deleteNote(bNote.id), '自己');
   ok('不能删除对方的记录');
+  await expectThrow(api.deleteAnnotation({ noteId: aNote.id, annotationId: aNote2.annotations[0].id }), '自己');
+  ok('笔记作者不能单独删除对方批注');
 
   api.setMe('userB');
-  await expectThrow(api.deleteNote(bNote.id), '不能再删除');
-  ok('已交换周期的记录不可删除（内容冻结）');
+  await api.deleteAnnotation({ noteId: aNote.id, annotationId: aNote2.annotations[0].id });
+  assert.strictEqual((await api.getCycleDetail(r.exchangedCycleId)).notes.find((n) => n.id === aNote.id).annotations.length, 0);
+  ok('可以删除自己在对方笔记下的批注');
+  await api.deleteNote(bNote.id);
+  assert.ok(!(await api.getCycleDetail(r.exchangedCycleId)).notes.some((n) => n.id === bNote.id));
+  ok('已交换周期可以删除自己的笔记');
 
   api.setMe('userA');
   const h = await api.getHistory();
@@ -212,26 +242,14 @@ function ok(label) {
   await expectThrow(api.updateCycleDays(0), '1-90');
   ok('周期天数可自定义（下一期生效），非法值被拒绝');
 
-  console.log('约定交换时间');
-
-  s = await api.getAppStatus();
-  await expectThrow(api.setExchangePlan({ day: 1, hour: 0 }), '未来的时间');
-  r = await api.setExchangePlan({ day: s.pair.cycleDays, hour: 23 });
-  assert.ok(r.exchangePlan.time > Date.now());
-  s = await api.getAppStatus();
-  assert.ok(s.exchangePlan && s.exchangePlan.day === s.pair.cycleDays);
-  await api.clearExchangePlan();
-  s = await api.getAppStatus();
-  assert.strictEqual(s.exchangePlan, null);
-  ok('可约定/取消交换时间，过去的时间会被拒绝');
-
   console.log('到期自动交换');
 
   // 白盒：直接把当前周期改为"已到期且仅 A 已打分"，验证不会自动交换
   s = await api.getAppStatus();
   const dbRaw = store['LOVE_MOCK_DB_V1'];
   const act = dbRaw.cycles.find((c) => c.status === 'active');
-  act.endDate = Date.now() - 1000;
+  const expiredEnd = Date.now() - 1000;
+  act.endDate = expiredEnd;
   act.scores.userA = { score: 7, comment: '', scoredAt: Date.now() };
   wx.setStorageSync('LOVE_MOCK_DB_V1', dbRaw);
   s = await api.getAppStatus();
@@ -240,11 +258,13 @@ function ok(label) {
 
   // B 补齐打分的瞬间自动交换
   api.setMe('userB');
+  const completedAtMin = Date.now();
   r = await api.submitScore({ score: 8, comment: '' });
   assert.strictEqual(r.autoExchanged, true);
   s = await api.getAppStatus();
   assert.strictEqual(s.cycle.index, 4);
-  ok('到期后双方补齐打分，立即自动交换并进入下一期');
+  assert.ok(s.cycle.startDate >= completedAtMin && s.cycle.startDate <= Date.now());
+  ok('到期后双方补齐打分，立即交换并从补齐时刻进入下一期');
 
   console.log('服务端校验');
 
@@ -261,6 +281,19 @@ function ok(label) {
   assert.strictEqual(s.bothScored, false);
   ok('重置后回到全新第 1 期');
 
+  advanceTo(Date.parse('2026-10-07T20:00:00+08:00'));
+  await api.resetMock();
+  const calendarDb = store['LOVE_MOCK_DB_V1'];
+  calendarDb.pairs[0].cycleDays = 1;
+  calendarDb.cycles = [];
+  // resetMock的默认周期是7天，模拟旧版一天周期再检查自然日兼容。
+  calendarDb.cycles.push({ id: 'legacy', pairId: calendarDb.pairs[0].id, index: 1, status: 'active', startDate: Date.now(), endDate: Date.now() + 86400000, scores: { userA: { score: 8 }, userB: { score: 9 } } });
+  assert.strictEqual((await api.getAppStatus()).cycle.endDate, Date.parse('2026-10-08T00:00:00+08:00'));
+  advanceTo(Date.parse('2026-10-08T00:00:00+08:00'));
+  const calendarStatus = await api.getAppStatus();
+  assert.strictEqual(calendarStatus.cycle.index, 2);
+  assert.strictEqual(calendarStatus.cycle.endDate, Date.parse('2026-10-09T00:00:00+08:00'));
+  ok('演示模式与云端一致：20点开始的一天周期在零点交换');
   console.log(`\n全部通过：${passed} 项业务断言 ✓`);
 })().catch((e) => {
   console.error('\n✗ 测试失败：' + e.message);

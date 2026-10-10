@@ -2,3 +2,19 @@ node_modules/
 _template_backup/
 *.log
 .DS_Store
+.workbuddy/
+
+# 本机配置、凭据与生成产物
+project.private.config.json
+.idea/
+.vscode/
+Thumbs.db
+*.tmp
+*.bak
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+coverage/
+dist/

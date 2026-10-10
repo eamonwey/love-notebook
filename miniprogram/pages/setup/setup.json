@@ -1,3 +1,6 @@
 {
-  "navigationBarTitleText": "配置引导"
+  "navigationBarTitleText": "配置引导",
+  "usingComponents": {
+    "gift-hub": "../../components/gift-hub/gift-hub"
+  }
 }

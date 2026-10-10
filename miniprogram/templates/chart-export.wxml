@@ -1,0 +1,20 @@
+<canvas type="2d" id="export-chart" class="export-canvas"></canvas>
+<view wx:if="{{exportImage}}" class="export-mask" catchtouchmove="stopExportTouch">
+  <view class="export-panel">
+    <view class="export-header">
+      <view><view class="export-title">分享分数追踪</view><view class="export-caption" wx:if="{{exportImages.length > 1}}">共 {{exportImages.length}} 张完整记录</view></view>
+      <view class="export-dismiss" role="button" aria-label="关闭预览" bindtap="closeExport">×</view>
+    </view>
+    <swiper class="export-gallery" style="height: {{exportGalleryHeight}}px;" current="{{exportIndex}}" bindchange="onExportChange" indicator-dots="{{false}}">
+      <swiper-item wx:for="{{exportImages}}" wx:key="path">
+        <scroll-view scroll-y="{{true}}" class="export-preview-scroll"><image class="export-preview" src="{{item.path}}" mode="widthFix" bindtap="previewExport" /></scroll-view>
+      </swiper-item>
+    </swiper>
+    <view class="export-caption export-range" wx:if="{{exportImages.length > 1}}">第 {{exportImages[exportIndex].first}}–{{exportImages[exportIndex].last}} 期 · {{exportIndex + 1}} / {{exportImages.length}}</view>
+    <view class="export-actions">
+      <button class="export-button export-secondary" hover-class="export-pressed" bindtap="saveChartImage">{{savingImages ? '正在保存…' : exportImages.length > 1 ? '保存全部' : '保存到相册'}}</button>
+      <button class="export-button export-primary" hover-class="export-pressed" bindtap="shareChartImage">{{exportImages.length > 1 ? '分享当前图片' : '分享图片'}}</button>
+    </view>
+    <view class="export-privacy">只包含双方分数，不包含笔记与事件正文</view>
+  </view>
+</view>

@@ -1,5 +1,8 @@
 {
   "navigationBarTitleText": "感受记录",
   "enablePullDownRefresh": true,
-  "backgroundTextStyle": "dark"
+  "backgroundTextStyle": "dark",
+  "usingComponents": {
+    "gift-hub": "../../components/gift-hub/gift-hub"
+  }
 }

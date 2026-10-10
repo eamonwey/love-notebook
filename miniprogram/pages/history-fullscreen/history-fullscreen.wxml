@@ -1,0 +1,37 @@
+<view class="fullscreen-page" style="padding: {{safeTop}}px {{safeRight}}px {{safeBottom}}px {{safeLeft}}px;">
+  <include src="../../templates/chart-export.wxml" />
+  <view class="screen-header">
+    <view class="screen-heading">分数追踪</view>
+    <view class="screen-actions">
+      <view class="screen-action" bindtap="exportChart">{{exporting ? '正在生成…' : '导出完整图片'}}</view>
+      <view class="screen-exit" role="button" bindtap="exitFullscreen">退出全屏</view>
+    </view>
+  </view>
+  <view class="screen-chart" wx:if="{{hasData}}">
+    <canvas wx:if="{{!selected && !exportImage}}" type="2d" id="chart" class="screen-canvas"></canvas>
+    <scroll-view id="chart-scroll" class="screen-scroll" scroll-x="{{true}}" scroll-left="{{chartScrollLeft}}" upper-threshold="24" enhanced="{{true}}" bounces="{{false}}" show-scrollbar="{{false}}" bindscroll="onChartScroll" bindscrolltoupper="onChartUpper" bindtouchstart="onChartTouchStart" bindtouchend="onChartTap">
+      <view style="width: {{chartContentWidth}}px; height: 100%;"></view>
+    </scroll-view>
+  </view>
+  <view class="screen-empty" wx:else bindtap="retryHistory">{{historyError || (loadingHistory ? '正在加载…' : '完成交换后，这里会出现分数曲线')}}</view>
+  <view class="screen-footer">
+    <view class="screen-legend"><text class="legend-me">● 我</text><text class="legend-ta">● TA</text><text class="legend-event">● 事件</text></view>
+    <view wx:if="{{historyError}}" bindtap="retryHistory">{{historyError}}</view>
+    <view wx:elif="{{exportProgress || loadingHistory}}">{{exportProgress || '正在加载更早记录…'}}</view>
+  </view>
+  <view wx:if="{{selected}}" class="event-mask" catchtouchmove="stopExportTouch">
+    <view class="event-dialog">
+      <view class="event-header"><view><view class="event-title">第 {{selected.index}} 期的故事</view><view class="event-scores">我 {{selected.myScore == null ? '—' : selected.myScore}} 分 · TA {{selected.partnerScore == null ? '—' : selected.partnerScore}} 分</view></view><view class="event-close" role="button" aria-label="关闭事件" bindtap="closeEvent">×</view></view>
+      <scroll-view scroll-y="{{true}}" class="event-scroll">
+        <view class="event-record" wx:for="{{selectedEvents}}" wx:key="id">
+          <view class="event-meta"><text>{{item.authorName}} · {{item.prevScore == null ? '—' : item.prevScore}} → {{item.newScore == null ? '—' : item.newScore}}</text><text>{{item.dateText}}</text></view>
+          <view class="event-reason">{{item.reason}}</view>
+        </view>
+        <view class="event-state" wx:if="{{loadingEvents}}">正在加载事件…</view>
+        <view class="event-state" wx:elif="{{eventError}}" bindtap="retryEvents">{{eventError}}</view>
+        <view class="event-state" wx:elif="{{eventCursor}}" bindtap="loadMoreEvents">加载更多</view>
+        <view class="event-state" wx:elif="{{!selectedEvents.length}}">这一期还没有事件记录</view>
+      </scroll-view>
+    </view>
+  </view>
+</view>

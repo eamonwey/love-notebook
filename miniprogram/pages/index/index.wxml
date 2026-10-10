@@ -18,7 +18,38 @@
   <block wx:if="{{status}}">
     <view class="head row-between">
       <view class="app-title">🌡️ 恋恋温度计</view>
-      <view class="identity-pill" wx:if="{{isMock}}" bindtap="onSwitchIdentity">👤 {{users[me].name}} ▾</view>
+      <view class="row head-right">
+        <view class="identity-pill" wx:if="{{isMock}}" bindtap="onSwitchIdentity">👤 {{myName}} ▾</view>
+        <view class="bell {{unreadCount > 0 ? 'bell-unread' : ''}}" bindtap="toggleReplies" role="button" aria-label="{{unreadCount > 0 ? '有' + unreadCount + '条未读回复，点击查看' : '查看TA的回复'}}">
+          <text class="bell-icon">🔔</text>
+          <view class="bell-badge" wx:if="{{unreadCount > 0}}">{{unreadCount > 99 ? '99+' : unreadCount}}</view>
+          <text class="bell-label" wx:if="{{unreadCount > 0}}">新回复</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 小铃铛：TA 对我记录的回复 -->
+    <view class="bell-mask" wx:if="{{showReplies}}" bindtap="closeReplies"></view>
+    <view class="bell-panel" wx:if="{{showReplies}}">
+      <view class="row-between">
+        <view class="bell-panel-title">🔔 TA 的回复</view>
+        <view class="link" bindtap="closeReplies">收起</view>
+      </view>
+      <view class="empty-mini" wx:if="{{!replies.length}}">
+        <text class="muted">还没有回复。TA 批注你的记录后，这里会提醒你。</text>
+      </view>
+      <view class="bell-item" wx:for="{{replies}}" wx:key="key" bindtap="openReply"
+        data-cycle="{{item.cycleId}}" data-note="{{item.noteId}}">
+        <view class="row-between">
+          <text class="bell-from">{{item.title}}</text>
+          <view class="row">
+            <text class="bell-new" wx:if="{{item.unread}}">未读</text>
+            <text class="muted bell-time">{{item.timeText}}</text>
+          </view>
+        </view>
+        <view class="bell-quote">「{{item.noteExcerpt}}」</view>
+        <view class="bell-content">{{item.content}}</view>
+      </view>
     </view>
 
     <view class="card hero">
@@ -41,17 +72,19 @@
           {{status.myScore.score}} 分 <text class="emoji">{{emoji}}</text>
         </view>
         <view class="score-line score-none" wx:else>还没打分</view>
-        <view class="muted" wx:if="{{status.myScore}}">点击可修改（交换前）</view>
+        <view class="muted" wx:if="{{status.cycle.status === 'exchanged'}}">本期已交换，分数已锁定</view>
+        <view class="muted" wx:elif="{{status.myScore}}">点击可修改（交换前）</view>
       </view>
-      <view class="score-arrow">去打分 ›</view>
+      <view class="score-arrow">{{status.cycle.status === 'exchanged' ? '已锁定' : '去打分 ›'}}</view>
     </view>
 
     <view class="card">
-      <view class="exchange-line" wx:if="{{status.bothScored}}">🎉 双方都完成打分，可以交换了</view>
+      <view class="exchange-line" wx:if="{{status.cycle.status === 'exchanged'}}">本期已交换，下一期 {{nextOpenText}} 开放</view>
+      <view class="exchange-line" wx:elif="{{status.bothScored}}">🎉 双方都完成打分，可以交换了</view>
       <view class="exchange-line" wx:elif="{{status.myScore}}">⏳ 你已打分，等待TA完成…</view>
       <view class="exchange-line" wx:else>✍️ 先给本期打个分</view>
-      <button class="btn-primary {{status.bothScored ? '' : 'btn-disabled'}}" bindtap="goExchange">进入交换中心</button>
-      <view class="muted center">交换前双方都不能看到对方的分数和笔记</view>
+      <button class="btn-primary" bindtap="goExchange">进入交换中心</button>
+      <view class="muted center">{{status.cycle.status === 'exchanged' ? '仍可补充本期笔记和批注，新增笔记立即对TA可见' : '交换前双方都不能看到对方的分数和笔记'}}</view>
     </view>
 
     <view class="card" wx:if="{{hasLast}}">
@@ -83,5 +116,6 @@
         <view class="quick-text">分数追踪</view>
       </view>
     </view>
+    <gift-hub shop="{{true}}" />
   </block>
 </view>

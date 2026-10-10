@@ -1,0 +1,51 @@
+<view class="gift-shop" wx:if="{{shop}}">
+  <view class="gift-heading"><text class="gift-title">送TA一份心意</text><text class="gift-balance">💎 {{state && state.available ? state.balance : '—'}}</text></view>
+  <view class="gift-rule" wx:if="{{loading && !state}}">正在加载本期钻石余额…</view>
+  <view class="gift-error" wx:elif="{{error}}" bindtap="refreshGifts">{{error}}</view>
+  <view class="gift-rule" wx:elif="{{!state || !state.available}}">和TA完成配对后，就可以互送礼物了。</view>
+  <view class="gift-rule" wx:else>第 {{state.cycleIndex}} 期 · 每人 {{state.allowance}} 颗免费钻石，不累加。下期每人 {{state.nextAllowance}} 颗，可在设置中修改。</view>
+  <view class="gift-shelf">
+    <button class="gift-choice" wx:for="{{catalog}}" wx:key="type" data-type="{{item.type}}" bindtap="sendGift" disabled="{{sending || loading || error || !state || !state.available}}">
+      <view class="car-logo" wx:if="{{item.type === 'car'}}" aria-label="红色跑车">
+        <view class="car-miniature">
+          <view class="car-shadow"></view><view class="car-spoiler"></view><view class="car-roof"></view><view class="car-window"></view><view class="car-body"></view><view class="car-door"></view><view class="car-intake"></view><view class="car-light"></view><view class="car-tail"></view>
+          <view class="car-wheel wheel-left"><view class="car-spokes"></view></view><view class="car-wheel wheel-right"><view class="car-spokes"></view></view>
+        </view>
+      </view>
+      <text class="gift-icon" wx:else>{{item.icon}}</text><text class="gift-name">{{item.name}}</text><text class="gift-price">{{item.cost}} 💎</text>
+    </button>
+  </view>
+  <view class="gift-rule">送出后，TA 打开小程序就能看到专属特效。</view>
+</view>
+<view class="gift-stage stage-{{effect.type}}" wx:if="{{effect}}" catchtouchmove="stopTouch">
+  <view class="gift-shade"></view>
+  <view class="gift-celebration">
+    <view class="gift-close" bindtap="receiveGift" hover-class="none" role="button" aria-disabled="{{receiving}}" aria-label="收下礼物并关闭"><view class="gift-close-mark"></view></view>
+    <view class="gift-from">{{effect.senderName}} 送给你</view>
+    <view class="gift-effect-title">{{effect.name}} ×{{effect.count}}</view>
+    <view class="gift-art">
+      <view class="gift-spark" wx:for="{{sparks}}" wx:key="*this" style="left: {{10 + item * 11}}%; animation-delay: {{item * 0.14}}s;">{{effect.type === 'car' ? '✦' : '♥'}}</view>
+      <view class="bloom" wx:if="{{effect.type === 'flower'}}">
+        <view class="flower-stem"></view><view class="flower-leaf"></view>
+        <view class="flower-head"><view class="flower-petal" wx:for="{{petals}}" wx:key="*this" style="transform: rotate({{item * 60}}deg) translateY(-46rpx);"></view><view class="flower-center">♥</view></view>
+      </view>
+      <view class="letter-art" wx:elif="{{effect.type === 'letter'}}">
+        <view class="letter-paper"><text class="letter-line">亲爱的你：</text><text class="letter-line">有你真好。</text><text class="letter-line letter-heart">♥</text></view>
+        <view class="letter-envelope"></view><view class="letter-seal">♥</view>
+      </view>
+      <view class="car-scene" wx:else>
+        <view class="car-road"><view class="car-road-marks"></view></view>
+        <view class="car-speed speed-one"></view><view class="car-speed speed-two"></view><view class="car-speed speed-three"></view>
+        <view class="car-art">
+          <view class="car-shadow"></view><view class="car-trail"></view><view class="car-spoiler"></view><view class="car-roof"></view><view class="car-window"></view><view class="car-body"></view><view class="car-door"></view><view class="car-intake"></view><view class="car-light"></view><view class="car-tail"></view>
+          <view class="car-wheel wheel-left"><view class="car-spokes"></view></view><view class="car-wheel wheel-right"><view class="car-spokes"></view></view>
+          <view class="car-glint"></view>
+        </view>
+        <view class="car-dust dust-one"></view><view class="car-dust dust-two"></view>
+      </view>
+    </view>
+    <view class="gift-words">{{effect.words}}</view>
+    <view class="gift-period">{{effect.periodText}}</view>
+    <button class="gift-receive" bindtap="receiveGift" hover-class="none" aria-disabled="{{receiving}}">{{receiving ? '正在收下…' : '收下心意'}}</button>
+  </view>
+</view>

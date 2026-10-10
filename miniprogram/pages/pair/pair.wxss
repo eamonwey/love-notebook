@@ -2,6 +2,33 @@
   margin-top: 20rpx;
 }
 
+.cycle-summary {
+  margin-top: 24rpx;
+  margin-bottom: 12rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.cycle-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-top: 24rpx;
+}
+
+.cycle-option {
+  padding: 14rpx 24rpx;
+  border: 2rpx solid #eadfdf;
+  border-radius: 18rpx;
+  font-size: 26rpx;
+}
+
+.cycle-selected {
+  background: #ffedef;
+  border-color: #ff6b81;
+  color: #b52246;
+}
+
 .code-line {
   margin-top: 24rpx;
   font-size: 28rpx;

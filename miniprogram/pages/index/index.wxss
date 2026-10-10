@@ -1,5 +1,7 @@
 .head {
   margin: 30rpx 32rpx 6rpx;
+  flex-wrap: wrap;
+  gap: 16rpx;
 }
 
 .app-title {
@@ -14,6 +16,151 @@
   font-size: 24rpx;
   border-radius: 30rpx;
   padding: 8rpx 22rpx;
+}
+
+/* ---- 小铃铛 ---- */
+.head-right {
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.bell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 88rpx;
+  min-height: 88rpx;
+  box-sizing: border-box;
+  margin-left: 20rpx;
+  padding: 10rpx 8rpx;
+  border: 2rpx solid transparent;
+  border-radius: 24rpx;
+}
+
+.bell-unread {
+  background: #ffe4eb;
+  border-color: #ffafc0;
+  box-shadow: 0 4rpx 14rpx rgba(214, 47, 82, 0.16);
+}
+
+.bell-unread .bell-icon {
+  transform-origin: 50% 15%;
+  animation: bell-ring 0.8s ease-in-out 2;
+}
+
+.bell-label {
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  line-height: 1.2;
+  font-weight: 600;
+  color: #b52246;
+}
+
+@keyframes bell-ring {
+  0%, 60%, 100% { transform: rotate(0deg); }
+  12%, 36% { transform: rotate(12deg); }
+  24%, 48% { transform: rotate(-12deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bell-unread .bell-icon {
+    animation: none;
+  }
+}
+
+.bell-icon {
+  display: inline-block;
+  font-size: 40rpx;
+  line-height: 1.1;
+}
+
+.bell-badge {
+  position: absolute;
+  top: -10rpx;
+  right: -8rpx;
+  min-width: 38rpx;
+  height: 38rpx;
+  line-height: 32rpx;
+  padding: 0 8rpx;
+  box-sizing: border-box;
+  background: #d92d50;
+  color: #ffffff;
+  font-size: 23rpx;
+  font-weight: 700;
+  border: 3rpx solid #ffffff;
+  text-align: center;
+  border-radius: 22rpx;
+}
+
+.bell-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(61, 58, 58, 0.22);
+  z-index: 10;
+}
+
+.bell-panel {
+  position: fixed;
+  top: 150rpx;
+  left: 24rpx;
+  right: 24rpx;
+  z-index: 11;
+  background: #ffffff;
+  border-radius: 24rpx;
+  padding: 28rpx;
+  max-height: 64vh;
+  overflow-y: auto;
+  box-shadow: 0 16rpx 50rpx rgba(255, 107, 129, 0.18);
+}
+
+.bell-panel-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #3d3a3a;
+}
+
+.bell-item {
+  border-top: 2rpx solid #f6ecea;
+  padding: 20rpx 0;
+}
+
+.bell-item:first-of-type {
+  border-top: none;
+  padding-top: 12rpx;
+}
+
+.bell-from {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #ff6b81;
+}
+
+.bell-time {
+  margin-left: 12rpx;
+}
+
+.bell-new {
+  font-size: 20rpx;
+  color: #ffffff;
+  background: #ff6b81;
+  border-radius: 16rpx;
+  padding: 2rpx 12rpx;
+}
+
+.bell-quote {
+  font-size: 24rpx;
+  color: #b9b0ab;
+  margin-top: 10rpx;
+}
+
+.bell-content {
+  font-size: 28rpx;
+  margin-top: 4rpx;
 }
 
 .loading {

@@ -2,6 +2,17 @@
   margin-top: 24rpx;
 }
 
+.nickname-current {
+  margin: 16rpx 0 12rpx;
+  font-size: 28rpx;
+  color: #3d3a3a;
+  word-break: break-all;
+}
+
+.nickname-help {
+  margin-top: 16rpx;
+}
+
 .identity {
   flex: 1;
   text-align: center;

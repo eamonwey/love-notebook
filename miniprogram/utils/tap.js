@@ -6,7 +6,7 @@
  *
  * 用法：把原 handler 逻辑包进 tap.run('key', () => { ...原逻辑... }, cooldownMs)
  * 注意：run 是同步调用传入函数的（函数体内的同步段仍在点击上下文里执行），
- *       因此 requestSubscribeMessage 这类需要用户授权上下文的 API 可以正常放在里面。
+ *       点击逻辑的同步部分不会延迟到后续微任务。
  */
 const running = {};
 const lastDone = {};

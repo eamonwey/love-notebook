@@ -1,4 +1,5 @@
 <view class="page">
+  <gift-hub />
   <view class="card">
     <view class="title">接入微信云开发（一次性配置）</view>
     <view class="muted">完成后，你们就可以在两台手机上各自登录、通过微信邀请绑定了。</view>
@@ -17,7 +18,7 @@
     </view>
     <view class="step">
       <text class="step-no">4</text>
-      <text class="step-text">数据库集合会在首次运行时自动创建，无需手动建立。</text>
+      <text class="step-text">请在云开发控制台一次性创建 users、pairs、cycles、notes、events、gifts 集合。已有集合无需重建，升级礼物功能需补建 gifts。</text>
     </view>
 
     <view class="muted err" wx:if="{{error}}">当前问题：{{error}}</view>

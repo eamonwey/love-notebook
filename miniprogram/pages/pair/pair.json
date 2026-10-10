@@ -1,3 +1,6 @@
 {
-  "navigationBarTitleText": "伴侣邀请"
+  "navigationBarTitleText": "伴侣邀请",
+  "usingComponents": {
+    "gift-hub": "../../components/gift-hub/gift-hub"
+  }
 }

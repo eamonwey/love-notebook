@@ -6,6 +6,7 @@ Page({
   data: {
     cycle: null,
     notes: [],
+    notesTruncated: false,
   },
 
   onShow() {
@@ -28,6 +29,7 @@ Page({
           timeText: fmtDateTime(n.createdAt),
           annCount: (n.annotations || []).length,
         })),
+        notesTruncated: !!r.notesTruncated,
       });
     } catch (e) {
       wx.showToast({ title: (e && e.message) || '加载失败', icon: 'none' });
@@ -44,7 +46,7 @@ Page({
       const confirmed = await new Promise((resolve) => {
         wx.showModal({
           title: '删除这条记录？',
-          content: '交换之后将无法删除',
+          content: '删除后无法恢复，该笔记下的批注也会一起删除。',
           success: (r) => resolve(!!r.confirm),
           fail: () => resolve(false),
         });

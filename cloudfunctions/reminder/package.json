@@ -1,9 +1,9 @@
 {
   "name": "cloudfunc-reminder",
   "version": "1.0.0",
-  "description": "约定交换时间到点提醒",
+  "description": "周期到期自动交换",
   "main": "index.js",
   "dependencies": {
-    "wx-server-sdk": "~2.6.3"
+    "wx-server-sdk": "4.0.2"
   }
 }

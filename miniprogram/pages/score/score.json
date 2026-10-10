@@ -1,3 +1,6 @@
 {
-  "navigationBarTitleText": "本期打分"
+  "navigationBarTitleText": "本期打分",
+  "usingComponents": {
+    "gift-hub": "../../components/gift-hub/gift-hub"
+  }
 }

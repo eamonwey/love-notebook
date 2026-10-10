@@ -1,4 +1,5 @@
 <view class="page">
+  <gift-hub />
   <view class="card">
     <view class="type-row row">
       <view class="type-chip {{type === 'happy' ? 'type-on' : ''}}" bindtap="setType" data-type="happy">
@@ -9,7 +10,8 @@
       </view>
     </view>
 
-    <textarea class="content-input edit-input" placeholder="具体说说发生了什么…（交换后TA才能看到）"
+    <view class="muted">交换前仅自己可见；若本期已交换，补充的笔记会立即对TA可见。</view>
+    <textarea class="content-input edit-input" placeholder="具体说说发生了什么…"
       value="{{content}}" bindinput="onInput" maxlength="500" />
 
     <view class="row-between">

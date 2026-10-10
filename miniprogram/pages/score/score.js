@@ -1,7 +1,7 @@
 const api = require('../../services/api.js');
 const { scoreEmoji } = require('../../utils/date.js');
-const { ensureSubscribe } = require('../../utils/notify.js');
 const tap = require('../../utils/tap.js');
+const exchangeShare = require('../../utils/exchange-share.js');
 
 Page({
   data: {
@@ -12,6 +12,10 @@ Page({
     showEvent: false,
     prevScore: null,
     eventReason: '',
+    saved: false,
+    autoExchanged: false,
+    editingCycleId: '',
+    checkingEdit: false,
   },
 
   onLoad() {
@@ -21,9 +25,18 @@ Page({
   async refresh() {
     try {
       const s = await api.getAppStatus();
+      if (!s.cycle) {
+        // 没有进行中的周期（尚未完成绑定 / 刚解绑）：明确提示，不要在这里读 null 崩溃
+        wx.showToast({ title: '还没有进行中的周期', icon: 'none' });
+        setTimeout(() => wx.navigateBack(), 800);
+        return;
+      }
       const cur = s.myScore ? s.myScore.score : 5;
       this.setData({
+        saved: s.cycle.status === 'exchanged',
+        autoExchanged: s.cycle.status === 'exchanged',
         cycleIndex: s.cycle.index,
+        editingCycleId: s.cycle.id,
         score: cur,
         emoji: scoreEmoji(cur),
         comment: s.myScore ? s.myScore.comment : '',
@@ -46,17 +59,15 @@ Page({
   },
 
   onSave() {
+    if (this.data.saved) return;
     tap.run('score-save', async () => {
-      // 顺势请求订阅消息授权（用户点一次「允许」，之后可收到一条交换/提醒通知）
-      ensureSubscribe();
       try {
-        const res = await api.submitScore({ score: this.data.score, comment: this.data.comment });
+        const res = await api.submitScore({ score: this.data.score, comment: this.data.comment, cycleId: this.data.editingCycleId });
+        this.setData({ saved: true, autoExchanged: !!res.autoExchanged });
         wx.showToast({ title: res.autoExchanged ? '已保存，本期已自动交换' : '已保存', icon: 'none' });
         if (res.changed) {
           // 分数与上期相比发生了变化：引导记录原因（功能4）
           this.setData({ showEvent: true, prevScore: res.prevScore, cycleId: res.cycleId });
-        } else {
-          setTimeout(() => wx.navigateBack(), 600);
         }
       } catch (e) {
         wx.showToast({ title: (e && e.message) || '保存失败', icon: 'none' });
@@ -66,6 +77,25 @@ Page({
 
   onEventReason(e) {
     this.setData({ eventReason: e.detail.value });
+  },
+
+  async onEditScore() {
+    if (!this.data.saved || this.data.autoExchanged || this.data.checkingEdit) return;
+    this.setData({ checkingEdit: true });
+    try {
+      const s = await api.getAppStatus();
+      if (!s.cycle || s.cycle.id !== this.data.editingCycleId || s.cycle.status !== 'active') {
+        wx.showToast({ title: '原周期已结束或配对已变化，请前往交换中心', icon: 'none' });
+        return;
+      }
+      const score = s.myScore ? s.myScore.score : this.data.score;
+      this.setData({ saved: false, showEvent: false, score, emoji: scoreEmoji(score),
+        comment: s.myScore ? s.myScore.comment : this.data.comment });
+    } catch (e) {
+      wx.showToast({ title: e.message || '暂时无法确认周期状态，请重试', icon: 'none' });
+    } finally {
+      this.setData({ checkingEdit: false });
+    }
   },
 
   onSaveEvent() {
@@ -78,7 +108,7 @@ Page({
           reason: this.data.eventReason,
         });
         wx.showToast({ title: '已记录', icon: 'success' });
-        setTimeout(() => wx.navigateBack(), 600);
+        this.setData({ showEvent: false });
       } catch (e) {
         wx.showToast({ title: (e && e.message) || '记录失败', icon: 'none' });
       }
@@ -86,6 +116,14 @@ Page({
   },
 
   onSkipEvent() {
-    wx.navigateBack();
+    this.setData({ showEvent: false });
+  },
+
+  onShareAppMessage() {
+    return exchangeShare(this.data.cycleIndex, this.data.saved && !this.data.autoExchanged);
+  },
+
+  goExchange() {
+    wx.navigateTo({ url: '/pages/exchange/exchange' });
   },
 });

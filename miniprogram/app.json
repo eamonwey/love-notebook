@@ -6,6 +6,7 @@
     "pages/note-edit/note-edit",
     "pages/exchange/exchange",
     "pages/history/history",
+    "pages/history-fullscreen/history-fullscreen",
     "pages/settings/settings",
     "pages/pair/pair",
     "pages/setup/setup",

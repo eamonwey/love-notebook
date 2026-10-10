@@ -1,4 +1,6 @@
 <view class="page">
+  <include src="../../templates/chart-export.wxml" />
+  <gift-hub bind:effectchange="onGiftEffectChange" />
   <view class="card">
     <view class="row-between">
       <view class="title">分数追踪</view>
@@ -6,22 +8,48 @@
     </view>
 
     <block wx:if="{{hasData}}">
-      <canvas type="2d" id="chart" class="chart" bindtouchend="onChartTap"></canvas>
+      <view class="chart-toolbar">
+        <view class="link" bindtap="exportChart">{{exporting ? '正在生成…' : '导出图片'}}</view>
+        <view class="link fullscreen-entry" role="button" bindtap="openFullscreen"><view class="fullscreen-icon"></view>全屏</view>
+      </view>
+      <view class="chart-window">
+        <canvas wx:if="{{!giftActive && !exportImage}}" type="2d" id="chart" class="chart chart-fixed"></canvas>
+        <scroll-view id="chart-scroll" class="chart-scroll" scroll-x="{{true}}" scroll-left="{{chartScrollLeft}}"
+          upper-threshold="24" enhanced="{{true}}" bounces="{{false}}" show-scrollbar="{{false}}"
+          bindscroll="onChartScroll" bindscrolltoupper="onChartUpper" bindtouchstart="onChartTouchStart" bindtouchend="onChartTap">
+          <view style="width: {{chartContentWidth}}px; height: 440rpx;"></view>
+        </scroll-view>
+      </view>
       <view class="row legend">
         <view class="legend-item"><view class="dot dot-me"></view>我</view>
         <view class="legend-item"><view class="dot dot-ta"></view>TA</view>
         <view class="legend-item"><view class="dot dot-ev"></view>事件</view>
       </view>
-      <view class="muted" wx:if="{{cyclesTruncated}}">期数较多，仅显示最近 100 期</view>
-      <view class="muted">点击图上的点，可以查看该期的分数与事件。</view>
+      <view class="muted" wx:if="{{historyError}}" bindtap="retryHistory">{{historyError}}</view>
+      <view class="muted" wx:if="{{loadingHistory}}">正在加载历史…</view>
+      <view class="muted" wx:if="{{exporting}}">{{exportProgress}}</view>
+      <view class="muted" wx:for="{{pauses}}" wx:key="id">{{item.text}}</view>
+      <view class="muted" wx:if="{{pauses.length}}">暂停期间不交换、不补分；折线在这里断开，和好后的新一期继续记录。</view>
+      <view class="muted">点击图上的黄色数字，下方显示对应那一期的事件；再次点击可收起。</view>
     </block>
+    <view class="empty" wx:elif="{{loadingHistory || historyError}}" bindtap="retryHistory">
+      <view class="muted">{{historyError || '正在加载记录…'}}</view>
+    </view>
     <view class="empty" wx:else>
       <view class="empty-emoji">📈</view>
       <view class="muted">完成第一次交换后，这里会出现分数曲线</view>
     </view>
   </view>
 
-  <view class="card" wx:if="{{selected}}">
+  <view class="card">
+    <view class="row-between">
+      <view class="title">事件时间线</view>
+      <view class="muted" wx:if="{{selected}}">长按自己的事件可删除</view>
+    </view>
+    <view class="empty-mini" wx:if="{{!selected}}">
+      <text class="muted">点击上方黄色图标，查看对应周期的事件时间线。</text>
+    </view>
+    <block wx:if="{{selected}}">
     <view class="row-between">
       <view class="title">第 {{selected.index}} 期</view>
       <view class="link" bindtap="goDetail" data-id="{{selected.cycleId}}">查看交换详情 ›</view>
@@ -37,7 +65,12 @@
       </view>
       <view class="ev-reason">{{item.reason}}</view>
     </view>
-    <view class="muted" wx:if="{{!selectedEvents.length}}">这一期没有记录事件</view>
+    <view class="muted" wx:if="{{loadingEvents}}">正在加载事件…</view>
+    <view class="link" wx:elif="{{eventError}}" bindtap="retryEvents">{{eventError}}</view>
+    <view class="link" wx:elif="{{eventCursor}}" bindtap="loadMoreEvents">加载更多本期事件</view>
+    <view class="muted" wx:elif="{{!selectedEvents.length}}">这一期没有记录事件</view>
+    <view class="muted" wx:if="{{eventsTruncated}}">事件较多，仅显示最近 200 条中的本期事件</view>
+    </block>
   </view>
 
   <view class="card" wx:if="{{showAddEvent}}">
@@ -61,23 +94,5 @@
     <textarea class="content-input" placeholder="发生了什么？为什么会变化？"
       value="{{reason}}" bindinput="onReason" maxlength="200" />
     <button class="btn-primary" bindtap="saveEvent">保存事件</button>
-  </view>
-
-  <view class="card">
-    <view class="row-between">
-      <view class="title">事件时间线</view>
-      <view class="muted">长按自己的事件可删除</view>
-    </view>
-    <view class="empty-mini" wx:if="{{!events.length}}">
-      <text class="muted">还没有事件记录。打分时分数变化会提示记录，也可以手动添加。</text>
-    </view>
-    <view class="muted" wx:if="{{eventsTruncated}}">事件较多，仅显示最近 200 条</view>
-    <view class="ev-item" wx:for="{{events}}" wx:key="id" bindlongpress="onDeleteEvent" data-id="{{item.id}}">
-      <view class="row-between">
-        <text class="ev-title">第{{item.cycleIndex}}期 · {{item.authorName}} · {{item.prevScore == null ? '—' : item.prevScore}} → {{item.newScore == null ? '—' : item.newScore}}</text>
-        <text class="muted">{{item.dateText}}</text>
-      </view>
-      <view class="ev-reason">{{item.reason}}</view>
-    </view>
   </view>
 </view>

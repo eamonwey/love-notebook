@@ -1,4 +1,5 @@
 <view class="page">
+  <gift-hub />
   <view class="loading" wx:if="{{mode === 'loading'}}">
     <text class="muted">加载中…</text>
   </view>
@@ -16,6 +17,9 @@
       <view class="title">💌 伴侣邀请</view>
       <block wx:if="{{!joinError}}">
         <view class="muted">「{{ownerName}}」邀请你绑定，一起记录这段感情。接受后你们将共享周期、互相打分交换。</view>
+        <view class="cycle-summary" wx:if="{{inviteCycleDays}}">交换周期：每 {{inviteCycleDays}} 天一期</view>
+        <view class="muted" wx:if="{{restoresHistory}}">你们曾经绑定过。接受后恢复共同历史，沿用原来的周期和钻石额度，开启新一期；解绑期间保留为追踪断点，未交换内容不会自动公开。</view>
+        <view class="muted">这是你们共用的周期，可先和TA商量好再接受邀请。</view>
         <button class="btn-primary" bindtap="acceptInvite">接受邀请</button>
       </block>
       <block wx:else>
@@ -44,11 +48,21 @@
     <view class="card">
       <view class="title">② 邀请TA</view>
       <block wx:if="{{code}}">
+        <view class="cycle-summary">交换周期：每 {{cycleDays}} 天一期</view>
         <view class="code-line">我的邀请码：<text class="code">{{code}}</text></view>
         <button class="btn-plain mini" bindtap="copyCode">复制邀请码</button>
         <button class="btn-primary share-btn" open-type="share">💌 通过微信邀请TA</button>
       </block>
       <block wx:else>
+        <view class="cycle-summary">先选择你们的交换周期</view>
+        <view class="muted">每隔多少天交换一次感受？请选择或输入天数，之后也可以在设置中调整。</view>
+        <view class="cycle-options">
+          <view class="cycle-option {{cycleDays === item ? 'cycle-selected' : ''}}" wx:for="{{[3, 7, 14, 30]}}" wx:key="*this" data-days="{{item}}" bindtap="chooseCycleDays">{{item}} 天</view>
+        </view>
+        <view class="form-row row">
+          <input class="ann-input" type="number" maxlength="2" placeholder="自定义 1–90 天" value="{{cycleDays}}" bindinput="onCycleDays" />
+          <text>天 / 期</text>
+        </view>
         <button class="btn-primary" bindtap="createInvite">生成我的邀请码</button>
         <view class="muted">生成后通过微信发给对方，对方点开卡片即可绑定。</view>
       </block>

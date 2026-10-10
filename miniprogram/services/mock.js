@@ -4,6 +4,7 @@
  * 分别打分、记录、交换，即可模拟两个人。
  */
 const { DAY } = require('../utils/date.js');
+const { cycleEnd, legacyEnd } = require('../utils/cycle-calendar');
 
 const DB_KEY = 'LOVE_MOCK_DB_V1';
 const ME_KEY = 'LOVE_MOCK_ME';
@@ -16,6 +17,17 @@ function loadDB() {
     db = seed();
     saveDB(db);
   }
+  // 兼容旧版本地数据：补上小铃铛的已读位置
+  if (!db.replyRead) {
+    db.replyRead = { userA: 0, userB: 0 };
+    saveDB(db);
+  }
+  let normalized = false;
+  db.cycles.forEach(c => {
+    const endDate = legacyEnd(c);
+    if (endDate !== c.endDate) { c.endDate = endDate; normalized = true; }
+  });
+  if (normalized) saveDB(db);
   return db;
 }
 
@@ -36,6 +48,8 @@ function seed() {
     cycles: [makeCycle(pair, 1, now)],
     notes: [],
     events: [],
+    // 小铃铛的已读位置：{ userA: 时间戳, userB: 时间戳 }
+    replyRead: { userA: 0, userB: 0 },
   };
 }
 
@@ -46,7 +60,8 @@ function makeCycle(pair, index, startMs) {
     pairId: pair.id,
     index: index,
     startDate: startMs,
-    endDate: startMs + days * DAY,
+    endDate: cycleEnd(startMs, days),
+    diamondAllowance: Number.isInteger(pair.diamondAllowance) ? pair.diamondAllowance : 10,
     status: 'active', // active | exchanged
     scores: {}, // { userA: {score, comment, scoredAt}, userB: {...} }
     exchangedAt: null,
@@ -64,7 +79,8 @@ function getMe() {
   return wx.getStorageSync(ME_KEY) || 'userA';
 }
 
-function setMe(id) {
+// 对外统一为 Promise（与 cloud 侧接口约定一致），调用方无论 await 还是 .then 都不会踩坑
+async function setMe(id) {
   if (id !== 'userA' && id !== 'userB') throw new Error('无效身份');
   wx.setStorageSync(ME_KEY, id);
   return id;
@@ -86,11 +102,13 @@ function ensureCurrent(db, now) {
     if (c.status === 'active') cur = c;
   });
   if (cur) return cur;
+  const last = db.cycles.slice().sort((a, b) => b.index - a.index)[0];
+  if (last && last.status === 'exchanged' && last.nextOpenAt > now) return last;
   let maxIndex = 0;
   db.cycles.forEach((c) => {
     if (c.index > maxIndex) maxIndex = c.index;
   });
-  const next = makeCycle(getPair(db), maxIndex + 1, now);
+  const next = makeCycle(getPair(db), maxIndex + 1, last && last.nextOpenAt ? last.nextOpenAt : now);
   db.cycles.push(next);
   saveDB(db);
   return next;
@@ -124,15 +142,24 @@ function maybeAutoExchange(db, now) {
   cycle.status = 'exchanged';
   cycle.exchangedAt = now;
   cycle.exchangeRequest = null;
-  cycle.exchangePlan = null;
-  db.cycles.push(makeCycle(pair, cycle.index + 1, now));
+  const latestScoredAt = Math.max(Number(cycle.scores.userA.scoredAt || 0), Number(cycle.scores.userB.scoredAt || 0));
+  const nextStart = cycle.endDate && latestScoredAt > cycle.endDate ? latestScoredAt : (cycle.endDate || now);
+  db.cycles.push(makeCycle(pair, cycle.index + 1, nextStart));
   return true;
 }
+
+const MAX_NOTES_PER_CYCLE = 100;
 
 /* ---------- 输出整形 ---------- */
 
 function pubScore(s) {
   return s ? { score: s.score, comment: s.comment, scoredAt: s.scoredAt } : null;
+}
+
+// 与云函数 publicNote 同构：作者只以昵称对外，userA/userB 这类内部标识不下发到页面数据
+function nameOf(db, oid, me) {
+  const u = db.users[oid];
+  return (u && u.name) || (oid === me ? '我' : 'TA');
 }
 
 function publishNote(db, n, me) {
@@ -142,15 +169,14 @@ function publishNote(db, n, me) {
     type: n.type,
     content: n.content,
     createdAt: n.createdAt,
-    author: n.author,
-    authorName: db.users[n.author] ? db.users[n.author].name : '匿名',
     mine: n.author === me,
+    authorName: nameOf(db, n.author, me),
     annotations: (n.annotations || []).map((a) => ({
       id: a.id,
       content: a.content,
       createdAt: a.createdAt,
-      author: a.author,
-      authorName: db.users[a.author] ? db.users[a.author].name : '匿名',
+      mine: a.author === me,
+      authorName: nameOf(db, a.author, me),
     })),
   };
 }
@@ -182,19 +208,19 @@ async function getAppStatus() {
     me: me,
     users: db.users,
     bound: true,
-    pair: { id: pair.id, cycleDays: pair.cycleDays },
+    pair: { id: pair.id, cycleDays: pair.cycleDays, diamondAllowance: Number.isInteger(pair.diamondAllowance) ? pair.diamondAllowance : 10 },
     cycle: {
       id: cycle.id,
       index: cycle.index,
       startDate: cycle.startDate,
       endDate: cycle.endDate,
       status: cycle.status,
+      nextOpenAt: cycle.nextOpenAt || null,
     },
     myScore: pubScore(cycle.scores[me]),
     partnerDone: !!cycle.scores[partner],
     bothScored: !!(cycle.scores.userA && cycle.scores.userB),
     exchangeRequest: cycle.exchangeRequest || null,
-    exchangePlan: cycle.exchangePlan || null,
     lastExchanged: last ? { id: last.id, index: last.index } : null,
     exchangedCount: exchangedCount,
   };
@@ -209,6 +235,7 @@ async function submitScore(payload) {
   const cycle = ensureCurrent(db, Date.now());
   const me = getMe();
   if (cycle.status !== 'active') throw new Error('本期已交换');
+  if (payload.cycleId !== undefined && payload.cycleId !== cycle.id) throw new Error('周期已变化，请重新打开打分页');
   cycle.scores[me] = {
     score: score,
     comment: comment,
@@ -233,11 +260,14 @@ async function submitScore(payload) {
 async function requestExchange() {
   const db = loadDB();
   const cycle = ensureCurrent(db, Date.now());
+  if (cycle.status !== 'active') throw new Error('本期已交换，请等待次日0点');
   const me = getMe();
   const existing = cycle.exchangeRequest;
   if (existing && existing.from && existing.from !== me) {
     throw new Error('对方已向你发起交换请求，请先在下方同意或暂不');
   }
+  // 与云函数一致：自己已完成本期打分才能发起
+  if (!(cycle.scores && cycle.scores[me])) throw new Error('先完成本期打分，再发起交换请求');
   cycle.exchangeRequest = { from: me, at: Date.now() };
   saveDB(db);
   return { ok: true, resent: !!(existing && existing.from === me) };
@@ -254,6 +284,7 @@ async function cancelExchangeRequest() {
 async function agreeExchange() {
   const db = loadDB();
   const cycle = ensureCurrent(db, Date.now());
+  if (cycle.status !== 'active') throw new Error('本期已交换，请等待次日0点');
   const me = getMe();
   const req = cycle.exchangeRequest;
   if (!req || !req.from) throw new Error('当前没有待处理的交换请求');
@@ -262,35 +293,9 @@ async function agreeExchange() {
   cycle.status = 'exchanged';
   cycle.exchangedAt = Date.now();
   cycle.exchangeRequest = null;
-  db.cycles.push(makeCycle(getPair(db), cycle.index + 1, cycle.exchangedAt));
+  cycle.nextOpenAt = (Math.floor((cycle.exchangedAt + 8 * 3600000) / DAY) + 1) * DAY - 8 * 3600000;
   saveDB(db);
-  return { ok: true, exchangedCycleId: cycle.id };
-}
-
-async function setExchangePlan(payload) {
-  const db = loadDB();
-  const cycle = ensureCurrent(db, Date.now());
-  const pair = getPair(db);
-  const day = Math.round(Number(payload.day));
-  const hour = Math.round(Number(payload.hour));
-  if (!(day >= 1 && day <= (pair.cycleDays || 7))) throw new Error('天数超出本期范围');
-  if (!(hour >= 0 && hour <= 23)) throw new Error('小时超出范围');
-  // 与云端一致：「第 N 天 H 点」按周期开始当天的本地日历日推算
-  const start = new Date(cycle.startDate);
-  const target = new Date(start.getFullYear(), start.getMonth(), start.getDate() + (day - 1), hour, 0, 0, 0);
-  const time = target.getTime();
-  if (time <= Date.now()) throw new Error('请选择一个未来的时间');
-  cycle.exchangePlan = { day: day, hour: hour, time: time, notified: false };
-  saveDB(db);
-  return { exchangePlan: cycle.exchangePlan };
-}
-
-async function clearExchangePlan() {
-  const db = loadDB();
-  const cycle = ensureCurrent(db, Date.now());
-  cycle.exchangePlan = null;
-  saveDB(db);
-  return { ok: true };
+  return { ok: true, exchangedCycleId: cycle.id, nextOpenAt: cycle.nextOpenAt };
 }
 
 async function getCycleDetail(cycleId) {
@@ -322,7 +327,8 @@ async function getCycleDetail(cycleId) {
         comment: '',
         locked: true,
       },
-      notes: mine.map((n) => publishNote(db, n, me)),
+      notes: mine.slice(0, 100).map((n) => publishNote(db, n, me)),
+      notesTruncated: mine.length > 100,
     };
   }
 
@@ -343,7 +349,8 @@ async function getCycleDetail(cycleId) {
       comment: c.scores[partner] ? c.scores[partner].comment : '',
       locked: false,
     },
-    notes: notes.map((n) => publishNote(db, n, me)),
+    notes: notes.slice(-100).map((n) => publishNote(db, n, me)),
+    notesTruncated: notes.length > 100,
   };
 }
 
@@ -355,7 +362,10 @@ async function addNote(payload) {
   const db = loadDB();
   const cycle = ensureCurrent(db, Date.now());
   const me = getMe();
-  if (cycle.status !== 'active') throw new Error('本期已交换，下期再记录吧');
+  if (cycle.status !== 'active' && !(cycle.status === 'exchanged' && cycle.nextOpenAt > Date.now())) throw new Error('周期已结束，请刷新后记录');
+  if (db.notes.filter((n) => n.cycleId === cycle.id).length >= MAX_NOTES_PER_CYCLE) {
+    throw new Error('本期最多记录 100 条，请在下一期继续记录');
+  }
   const note = {
     id: nextId(db, 'n'),
     pairId: cycle.pairId,
@@ -381,7 +391,7 @@ async function deleteNote(id) {
   db.cycles.forEach((c) => {
     if (c.id === db.notes[idx].cycleId) cycle = c;
   });
-  if (!cycle || cycle.status !== 'active') throw new Error('已交换的记录不能再删除');
+  if (!cycle) throw new Error('周期不存在');
   db.notes.splice(idx, 1);
   saveDB(db);
   return true;
@@ -395,9 +405,23 @@ async function getMyNotes() {
     .filter((n) => n.cycleId === cycle.id && n.author === me)
     .sort((a, b) => b.createdAt - a.createdAt);
   return {
-    cycle: { id: cycle.id, index: cycle.index },
-    notes: list.map((n) => publishNote(db, n, me)),
+    cycle: { id: cycle.id, index: cycle.index, status: cycle.status, nextOpenAt: cycle.nextOpenAt || null },
+    notes: list.slice(0, 100).map((n) => publishNote(db, n, me)),
+    notesTruncated: list.length > 100,
   };
+}
+
+async function deleteAnnotation(payload) {
+  const db = loadDB();
+  const me = getMe();
+  const note = db.notes.find((n) => n.id === payload.noteId);
+  if (!note) throw new Error('记录不存在');
+  const ann = (note.annotations || []).find((a) => a.id === payload.annotationId);
+  if (!ann) throw new Error('批注不存在');
+  if (ann.author !== me) throw new Error('只能删除自己的批注');
+  note.annotations = note.annotations.filter((a) => a.id !== payload.annotationId || a.author !== me);
+  saveDB(db);
+  return true;
 }
 
 async function annotate(payload) {
@@ -425,6 +449,69 @@ async function annotate(payload) {
   });
   saveDB(db);
   return publishNote(db, note, me);
+}
+
+/* ---------- 小铃铛：伴侣对我记录的批注（与云函数 note.unreadReplies 同构） ---------- */
+
+const REPLY_LIST_MAX = 20;
+
+function cut(s, n) {
+  s = String(s || '');
+  return s.length > n ? s.slice(0, n - 1) + '…' : s;
+}
+
+function cycleIndexById(db, id) {
+  let idx = null;
+  db.cycles.forEach((c) => {
+    if (c.id === id) idx = c.index;
+  });
+  return idx;
+}
+
+async function getUnreadReplies() {
+  const db = loadDB();
+  const me = getMe();
+  const since = Number((db.replyRead || {})[me] || 0);
+  const all = [];
+  db.notes.forEach((n) => {
+    if (n.author !== me) return;
+    (n.annotations || []).forEach((a) => {
+      if (!a || !a.author || a.author === me) return;
+      const at = Number(a.createdAt || 0);
+      all.push({
+        key: String(a.id || at),
+        noteId: n.id,
+        cycleId: n.cycleId,
+        type: n.type,
+        noteExcerpt: cut(n.content, 40),
+        createdAt: at,
+        content: String(a.content || ''),
+        authorName: nameOf(db, a.author, me),
+        unread: at > since,
+        cycleIndex: cycleIndexById(db, n.cycleId),
+      });
+    });
+  });
+  all.sort((a, b) => b.createdAt - a.createdAt);
+  let unreadCount = 0;
+  all.forEach((it) => {
+    if (it.unread) unreadCount++;
+  });
+  return { items: all.slice(0, REPLY_LIST_MAX), unreadCount: unreadCount, replyReadAt: since };
+}
+
+async function markRepliesRead(upTo) {
+  const db = loadDB();
+  const me = getMe();
+  db.replyRead = db.replyRead || { userA: 0, userB: 0 };
+  const cur = Number(db.replyRead[me] || 0);
+  const raw = upTo == null ? Date.now() : Number(upTo);
+  if (!isFinite(raw) || raw <= 0) return { readAt: cur };
+  const next = Math.min(Math.floor(raw), Date.now());
+  if (next <= cur) return { readAt: cur };
+  db.replyRead[me] = next;
+  saveDB(db);
+  return { readAt: next };
 }
 
 async function addEvent(payload) {
@@ -481,7 +568,7 @@ async function deleteEvent(id) {
   return true;
 }
 
-async function getHistory() {
+async function getHistory(payload = {}) {
   const db = loadDB();
   const me = getMe();
   const partner = partnerOf(me);
@@ -509,12 +596,28 @@ async function getHistory() {
       return !!(c && c.status === 'exchanged');
     })
     .sort((a, b) => b.createdAt - a.createdAt)
-    .map((e) => Object.assign({}, e, { authorName: db.users[e.author] ? db.users[e.author].name : '匿名' }));
+    .map((e) => ({
+      id: e.id,
+      cycleId: e.cycleId,
+      cycleIndex: e.cycleIndex,
+      prevScore: e.prevScore,
+      newScore: e.newScore,
+      reason: e.reason,
+      date: e.date,
+      createdAt: e.createdAt,
+      mine: e.author === me,
+      authorName: nameOf(db, e.author, me),
+    }));
+  const eligible = rows.filter((r) => !payload.beforeIndex || r.index < payload.beforeIndex);
+  const limit = payload.pageSize || 100;
+  const page = eligible.slice(-limit).map((r) => Object.assign({}, r, { eventCount: events.filter((e) => e.cycleId === r.cycleId).length }));
   return {
-    rows: rows,
-    events: events,
-    activeCycle: { id: active.id, index: active.index },
-    cyclesTruncated: false,
+    rows: page,
+    events: payload.pageSize ? [] : events,
+    activeCycle: active.status === 'active' ? { id: active.id, index: active.index } : null,
+    hasMore: eligible.length > limit,
+    nextBeforeIndex: eligible.length > limit ? page[0].index : null,
+    cyclesTruncated: eligible.length > limit,
     eventsTruncated: false,
   };
 }
@@ -543,6 +646,59 @@ function notSupported(name) {
 }
 
 module.exports = {
+  getGiftState: async function () {
+    const s = await getAppStatus();
+    const db = loadDB();
+    const cycle = db.cycles.find((c) => c.id === s.cycle.id);
+    const me = getMe();
+    return { available: true, walletKey: 'demo_' + me, cycleId: cycle.id, cycleIndex: cycle.index,
+      allowance: Number.isInteger(cycle.diamondAllowance) ? cycle.diamondAllowance : 10,
+      nextAllowance: Number.isInteger(getPair(db).diamondAllowance) ? getPair(db).diamondAllowance : 10,
+      balance: (Number.isInteger(cycle.diamondAllowance) ? cycle.diamondAllowance : 10) - (db.gifts || []).filter((g) => g.cycleId === cycle.id && g.from === me).reduce((n, g) => n + g.cost, 0),
+      inbox: (db.gifts || []).filter((g) => g.to === me && !g.seen).slice(0, 20)
+        .map((g) => ({ id: g.id, type: g.type, quantity: g.quantity || 1, senderName: g.senderName, senderKey: 'demo_' + g.from, cycleIndex: g.cycleIndex })),
+    };
+  },
+  sendGift: async function (p) {
+    const s = await module.exports.getGiftState();
+    const prices = { flower: 1, letter: 5, car: 10 };
+    if (typeof p.type !== 'string' || !Object.prototype.hasOwnProperty.call(prices, p.type)) throw new Error('请选择有效的礼物');
+    const quantity = p.quantity === undefined ? 1 : p.quantity;
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 10) throw new Error('礼物数量必须为1至10的整数');
+    if (typeof p.requestId !== 'string' || !/^[a-zA-Z0-9_-]{8,80}$/.test(p.requestId)) throw new Error('送礼请求无效');
+    const db = loadDB();
+    const me = getMe();
+    const gifts = db.gifts || [];
+    const current = ensureCurrent(db, Date.now());
+    const remaining = (Number.isInteger(current.diamondAllowance) ? current.diamondAllowance : 10) - gifts.filter((g) => g.cycleId === current.id && g.from === me).reduce((n, g) => n + g.cost, 0);
+    const existing = gifts.find((g) => g.from === me && g.cycleId === p.cycleId && g.requestId === p.requestId);
+    if (existing) {
+      if (existing.type !== p.type || (existing.quantity || 1) !== quantity) throw new Error('请勿重复使用送礼请求');
+      return { id: existing.id, balance: remaining };
+    }
+    if (p.cycleId !== current.id) throw new Error('已进入新周期，请刷新余额后再送礼');
+    const cost = prices[p.type] * quantity;
+    if (remaining < cost) throw new Error('本期钻石不足，请等待下一期');
+    const id = nextId(db, 'gift_');
+    gifts.push({ id, requestId: p.requestId, from: me, to: partnerOf(me), type: p.type, quantity, cost,
+      cycleId: s.cycleId, cycleIndex: s.cycleIndex, senderName: db.users[me].name, seen: false });
+    db.gifts = gifts;
+    saveDB(db);
+    return { id, balance: remaining - cost };
+  },
+  acknowledgeGift: async function (id) {
+    const ids = Array.isArray(id) ? id : [id];
+    if (!ids.length || ids.length > 20 || ids.some((value) => typeof value !== 'string' || !value)) throw new Error('礼物编号无效');
+    const db = loadDB();
+    (db.gifts || []).filter((g) => ids.includes(g.id) && g.to === getMe()).forEach((g) => { g.seen = true; });
+    saveDB(db);
+    return { acknowledged: true };
+  },
+  getExchangePage: async function (cycleId) {
+    const status = await getAppStatus();
+    const id = cycleId || (status.lastExchanged && status.lastExchanged.id);
+    return { status, detail: id ? await getCycleDetail(id) : null };
+  },
   isMock: true,
   init: init,
   getAppStatus: getAppStatus,
@@ -550,17 +706,31 @@ module.exports = {
   requestExchange: requestExchange,
   cancelExchangeRequest: cancelExchangeRequest,
   agreeExchange: agreeExchange,
-  setExchangePlan: setExchangePlan,
-  clearExchangePlan: clearExchangePlan,
   getCycleDetail: getCycleDetail,
   addNote: addNote,
   deleteNote: deleteNote,
   getMyNotes: getMyNotes,
   annotate: annotate,
+  deleteAnnotation: deleteAnnotation,
+  getUnreadReplies: getUnreadReplies,
+  markRepliesRead: markRepliesRead,
   addEvent: addEvent,
   deleteEvent: deleteEvent,
   getHistory: getHistory,
+  getCycleEvents: async function (payload) {
+    const h = await getHistory();
+    const list = h.events.filter((e) => e.cycleId === payload.cycleId && (!payload.beforeId || e.id < payload.beforeId))
+      .sort((a, b) => a.id < b.id ? 1 : a.id > b.id ? -1 : 0);
+    return { events: list.slice(0, 50), nextBeforeId: list.length > 50 ? list[49].id : null };
+  },
   updateCycleDays: updateCycleDays,
+  updateDiamondAllowance: async function (amount) {
+    if (!Number.isInteger(amount) || amount < 0 || amount > 100) throw new Error('钻石额度需要是0–100的整数');
+    const db = loadDB();
+    getPair(db).diamondAllowance = amount;
+    saveDB(db);
+    return { diamondAllowance: amount };
+  },
   resetMock: resetMock,
   setMe: setMe,
   isEnvConfigured: function () {
